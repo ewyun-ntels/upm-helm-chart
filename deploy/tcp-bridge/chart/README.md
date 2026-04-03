@@ -92,7 +92,7 @@ resources:
     memory: 128Mi
 ```
 
-#### 6. Multus + macvlan + whereabouts
+#### 6. Multus + ipvlan + whereabouts
 
 ```yaml
 replicaCount: 2

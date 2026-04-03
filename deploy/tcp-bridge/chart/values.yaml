@@ -28,15 +28,15 @@ multus:
     name: "tcp-bridge-net"
     namespace: ""        # 빈값이면, Helm 설치 시 지정한 네임스페이스
     cniVersion: "0.3.1"
-    type: "macvlan"
+    type: "ipvlan"
     master: "eth0"
-    mode: "bridge"
+    mode: "l2"
     mtu: 0
     ipam:
       type: "static"
       gateway: "10.255.254.1"
       routes:
-        - dst: "192.168.15.0/24"
+        - dst: "192.168.15.0/24"      # tcp endpoint 대역만 net1으로 라우팅
           gw: "10.255.254.1"
 
 podSecurityContext:
