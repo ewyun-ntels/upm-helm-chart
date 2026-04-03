@@ -1,0 +1,34 @@
+1.
+nodeSelector:
+  node-group.ntels.io/type: upm-app
+
+2.
+# Node eviction settings
+# Fast eviction when node becomes not-ready or unreachable
+nodeEviction:
+  enabled: true
+  tolerationSeconds: 10
+
+3.
+podAntiAffinity:
+  enabled: true
+  # Use 'required' for hard constraint or 'preferred' for soft constraint
+  type: required  # required or preferred
+
+
+4.
+skew
+
+5.
+롤링 업데이트 설정
+
+
+
+postgresql >>>>
+디비 버전 > 12 이상
+아이디(upmdb) / 비번(upmdb) / database 생성(upmdb)
+storageclass 지정
+
+
+nats >> 
+노드 포트 가능

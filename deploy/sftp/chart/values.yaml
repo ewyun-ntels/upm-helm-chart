@@ -1,0 +1,142 @@
+# Default values for SFTP chart
+
+#############################################
+# Application Settings
+#############################################
+
+# Replica count for the SFTP Deployment
+replicaCount: 2
+
+# Rolling update strategy for the SFTP Deployment
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+
+# Image configuration
+image:
+  repository: 192.168.61.145/ewy/sftp-nfs
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+# Service configuration
+service:
+  type: LoadBalancer
+  port: 22
+  targetPort: 22
+  # MetalLB LoadBalancer configuration
+  # loadBalancerClass: ""  # Leave empty or omit for MetalLB
+  allocateLoadBalancerNodePorts: true
+  # External traffic policy
+  # Local: preserves source IP, more efficient
+  # Cluster: distributes traffic across all nodes
+  externalTrafficPolicy: Cluster
+
+# Multiple external Services can target the same SFTP Deployment.
+# When set, each entry creates a dedicated Service with its own external IP.
+# addressPool is used for the Service annotation and for the chart-managed
+# IPAddressPool resource when metallb.enabled=true.
+services:
+  - name: public-ems
+    loadBalancerIP: "192.168.0.100"
+    addressPool: sftp-private-ems
+    port: 22
+    targetPort: 22
+  - name: public-pg
+    loadBalancerIP: "10.255.254.100"
+    addressPool: sftp-public-pg
+    port: 22
+    targetPort: 22
+persistence:
+  nfs:
+    # Leave empty to use the in-cluster NFS StatefulSet pod DNS name.
+    # Set to an external NFS IP or FQDN when needed.
+    server: "10.105.183.60"
+    podName: nfs-server-0
+    serviceName: nfs-server-client
+    path: /
+    # path: /exports
+
+# SSH host keys packaged with this chart from files/host-key/.
+# When enabled, Helm creates a Secret and mounts the private keys into /etc/ssh.
+hostKeys:
+  enabled: true
+  secretName: ""
+
+# SFTP accounts to create.
+# Each account gets its own chroot at /home/<username> backed by NFS.
+# loginDirectory is the path shown inside that chroot after login.
+accounts:
+  - username: upm_ems
+    password: upm_ems
+    uid: 1001
+    gid: 1001
+    loginDirectory: ""
+    directories:
+      - /ems/MP/MAP
+  - username: upm
+    password: upm
+    uid: 1002
+    gid: 1002
+    loginDirectory: ""
+    directories:
+      - /APPDATA/PM/FTP
+      - /BACKUP/RQP/upm_file/rqp_conn_cells_batch_request
+      - /BACKUP/RQP/upm_file/rqp_conn_cells_batch_response
+      - /BACKUP/RQP/upm_file/status
+      - /BACKUP/RQP/upm_file/rqp_conn_cells_request
+      - /BACKUP/RQP/upm_file/rqp_conn_cells_response
+
+# Resource limits
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# Node selector
+nodeSelector:
+  node-group.ntels.io/type: upm-app
+
+# Tolerations
+tolerations: []
+
+# Node eviction settings
+# Fast eviction when node becomes not-ready or unreachable
+nodeEviction:
+  enabled: true
+  tolerationSeconds: 10
+
+# Affinity settings
+affinity: {}
+
+# Pod Anti-Affinity settings
+# Prevent multiple pods from being scheduled on the same node
+podAntiAffinity:
+  enabled: true
+  # Use 'required' for hard constraint or 'preferred' for soft constraint
+  type: required  # required or preferred
+
+# Security Context
+securityContext:
+  runAsUser: 0
+  runAsNonRoot: false
+
+# Pod annotations
+podAnnotations: {}
+
+# Service account
+serviceAccount:
+  create: true
+  name: ""
+
+# MetalLB configuration
+# MetalLB must already be installed and its advertisement mode must already
+# be defined outside this chart. This chart only creates IPAddressPool resources.
+metallb:
+  enabled: true  # Set to true when this chart should create IPAddressPool resources
+  namespace: metallb-system  # MetalLB namespace (must be installed separately)
+  autoAssign: true  # Auto-assign IP from pool to LoadBalancer services

@@ -1,0 +1,49 @@
+---
+# eth0 외부망 네트워크 (macvlan)
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: eth0-external-network
+  namespace: default
+spec:
+  config: '{
+    "cniVersion": "0.3.1",
+    "type": "macvlan",
+    "master": "eth0",
+    "mode": "bridge",
+    "ipam": {
+      "type": "host-local",
+      "subnet": "10.255.254.0/24",
+      "rangeStart": "10.255.254.101",
+      "rangeEnd": "10.255.254.200",
+      "gateway": "10.255.254.1",
+      "routes": [
+        { "dst": "0.0.0.0/0" }
+      ]
+    }
+  }'
+
+---
+# eth1 내부망 네트워크 (macvlan)
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: eth1-internal-network
+  namespace: default
+spec:
+  config: '{
+    "cniVersion": "0.3.1",
+    "type": "macvlan",
+    "master": "eth1",
+    "mode": "bridge",
+    "ipam": {
+      "type": "host-local",
+      "subnet": "192.168.0.0/24",
+      "rangeStart": "192.168.0.101",
+      "rangeEnd": "192.168.0.200",
+      "gateway": "192.168.0.1",
+      "routes": [
+        { "dst": "192.168.0.0/24" }
+      ]
+    }
+  }'

@@ -1,0 +1,43 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: upmdb-cluster
+  namespace: {{ .Release.Namespace }}
+spec:
+  instances: 3
+  imageName: {{ .Values.upmdb.imageName | quote }}
+  primaryUpdateMethod: switchover
+  primaryUpdateStrategy: unsupervised
+  affinity:
+    nodeSelector:
+      node-group.ntels.io/type: upm-app
+    tolerations:
+      - key: node.kubernetes.io/not-ready
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 10
+      - key: node.kubernetes.io/unreachable
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 10
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: DoNotSchedule
+      nodeAffinityPolicy: Honor
+      nodeTaintsPolicy: Honor
+      labelSelector:
+        matchLabels:
+          cnpg.io/cluster: upmdb-cluster
+  storage:
+    size: {{ .Values.upmdb.storage.size | quote }}
+    storageClass: {{ .Values.upmdb.storage.storageClass | quote }}
+  bootstrap:
+    initdb:
+      database: upmdb
+      owner: upmdb
+      secret:
+        name: upmdb-app-secret
+      postInitApplicationSQL:
+        - CREATE EXTENSION IF NOT EXISTS postgis;
+        - CREATE EXTENSION IF NOT EXISTS postgis_topology;

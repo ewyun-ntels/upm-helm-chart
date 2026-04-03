@@ -1,0 +1,25 @@
+{{- if .Values.metallb.enabled }}
+{{- $root := . -}}
+{{- range $service := .Values.services }}
+{{- if and $service.loadBalancerIP $service.addressPool }}
+---
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: {{ $service.addressPool }}
+  namespace: {{ $root.Values.metallb.namespace }}
+  labels:
+    {{- include "sftp.labels" $root | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  addresses:
+  - {{ $service.loadBalancerIP }}-{{ $service.loadBalancerIP }}
+  {{- with $root.Values.metallb.autoAssign }}
+  autoAssign: {{ . }}
+  {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

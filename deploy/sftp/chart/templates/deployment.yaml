@@ -1,0 +1,211 @@
+{{- if not .Values.accounts }}
+{{- fail "values.accounts must contain at least one SFTP account" }}
+{{- end }}
+{{- $probeAccount := index .Values.accounts 0 }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "sftp.fullname" . }}
+  labels:
+    {{- include "sftp.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    {{- toYaml .Values.updateStrategy | nindent 4 }}
+  selector:
+    matchLabels:
+      {{- include "sftp.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "sftp.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- if .Values.serviceAccount.create }}
+      serviceAccountName: {{ include "sftp.serviceAccountName" . }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      initContainers:
+      - name: init-layout
+        image: alpine:3.22
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+          {{- range $account := .Values.accounts }}
+          mkdir -p "/nfs-root/{{ $account.username }}"
+          chown root:root "/nfs-root/{{ $account.username }}"
+          chmod 755 "/nfs-root/{{ $account.username }}"
+          {{- range $dir := $account.directories }}
+          mkdir -p "/nfs-root/{{ $account.username }}{{ $dir }}"
+          chown -R {{ $account.uid }}:{{ $account.gid }} "/nfs-root/{{ $account.username }}{{ $dir }}"
+          {{- end }}
+          {{- if $account.loginDirectory }}
+          mkdir -p "/nfs-root/{{ $account.username }}{{ $account.loginDirectory }}"
+          chown -R {{ $account.uid }}:{{ $account.gid }} "/nfs-root/{{ $account.username }}{{ $account.loginDirectory }}"
+          {{- end }}
+          {{- end }}
+          {{- if .Values.hostKeys.enabled }}
+          cp /input-host-keys/ssh_host_ed25519_key /work-host-keys/ssh_host_ed25519_key
+          cp /input-host-keys/ssh_host_rsa_key /work-host-keys/ssh_host_rsa_key
+          chmod 600 /work-host-keys/ssh_host_ed25519_key /work-host-keys/ssh_host_rsa_key
+          {{- end }}
+        volumeMounts:
+        - name: data
+          mountPath: /nfs-root
+        {{- if .Values.hostKeys.enabled }}
+        - name: host-keys-src
+          mountPath: /input-host-keys
+          readOnly: true
+        - name: host-keys-runtime
+          mountPath: /work-host-keys
+        {{- end }}
+      containers:
+      - name: sftp
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command:
+        - /bin/bash
+        - -c
+        - |
+          set -e
+          {{- range $account := .Values.accounts }}
+          {{- if $account.loginDirectory }}
+          if ! grep -q "codex-start-directory-{{ $account.username }}" /etc/ssh/sshd_config 2>/dev/null; then
+            printf '\n# codex-start-directory-{{ $account.username }}\nMatch User {{ $account.username }}\n    ForceCommand internal-sftp -d {{ $account.loginDirectory }}\n' >> /etc/ssh/sshd_config
+          fi
+          {{- end }}
+          {{- end }}
+          exec /entrypoint "$@"
+        ports:
+        - name: ssh
+          containerPort: {{ .Values.service.targetPort }}
+          protocol: TCP
+        volumeMounts:
+        {{- range .Values.accounts }}
+        - name: data
+          mountPath: /home/{{ .username }}
+          subPath: {{ .username }}
+        {{- end }}
+        {{- if .Values.hostKeys.enabled }}
+        - name: host-keys-runtime
+          mountPath: /etc/ssh/ssh_host_ed25519_key
+          subPath: ssh_host_ed25519_key
+        - name: host-keys-runtime
+          mountPath: /etc/ssh/ssh_host_rsa_key
+          subPath: ssh_host_rsa_key
+        {{- end }}
+        - name: sftp-users
+          mountPath: /etc/sftp/users.conf
+          subPath: users.conf
+          readOnly: true
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - |
+              {{- range $account := .Values.accounts }}
+              awk '$2 == "/home/{{ $account.username }}" && $3 ~ /^nfs/ {found=1} END {exit found ? 0 : 1}' /proc/mounts || exit 1
+              {{- end }}
+              for p in /proc/[0-9]*; do
+                if [ "$(cat "$p/comm" 2>/dev/null)" = "sshd" ]; then
+                  exit 0
+                fi
+              done
+              exit 1
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - |
+              {{- range $account := .Values.accounts }}
+              awk '$2 == "/home/{{ $account.username }}" && $3 ~ /^nfs/ {found=1} END {exit found ? 0 : 1}' /proc/mounts || exit 1
+              {{- end }}
+              for p in /proc/[0-9]*; do
+                if [ "$(cat "$p/comm" 2>/dev/null)" = "sshd" ]; then
+                  exit 0
+                fi
+              done
+              exit 1
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      affinity:
+        {{- if .Values.podAntiAffinity.enabled }}
+        podAntiAffinity:
+          {{- if eq .Values.podAntiAffinity.type "required" }}
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                {{- include "sftp.selectorLabels" . | nindent 16 }}
+            topologyKey: kubernetes.io/hostname
+          {{- else if eq .Values.podAntiAffinity.type "preferred" }}
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  {{- include "sftp.selectorLabels" . | nindent 20 }}
+              topologyKey: kubernetes.io/hostname
+          {{- end }}
+        {{- end }}
+        {{- with .Values.affinity }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      tolerations:
+      {{- if .Values.nodeEviction.enabled }}
+      - key: "node.kubernetes.io/not-ready"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: {{ .Values.nodeEviction.tolerationSeconds }}
+      - key: "node.kubernetes.io/unreachable"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: {{ .Values.nodeEviction.tolerationSeconds }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+        {{- toYaml . | nindent 6 }}
+      {{- end }}
+      volumes:
+      - name: data
+        nfs:
+          {{- if .Values.persistence.nfs.server }}
+          server: {{ .Values.persistence.nfs.server }}
+          path: {{ .Values.persistence.nfs.path }}
+          {{- else }}
+          server: {{ .Values.persistence.nfs.podName }}.{{ .Values.persistence.nfs.serviceName }}.{{ .Release.Namespace }}.svc.cluster.local
+          path: /
+          {{- end }}
+      - name: sftp-users
+        configMap:
+          name: {{ include "sftp.fullname" . }}-config
+          items:
+          - key: sftp-users
+            path: users.conf
+      {{- if .Values.hostKeys.enabled }}
+      - name: host-keys-src
+        secret:
+          secretName: {{ include "sftp.hostKeysSecretName" . }}
+          defaultMode: 0400
+      - name: host-keys-runtime
+        emptyDir: {}
+      {{- end }}

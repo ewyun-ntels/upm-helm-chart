@@ -1,0 +1,116 @@
+# NATS Helm Chart Values 변경 이력
+
+## 변경 일시: 2026-01-28
+
+### 변경 목적
+- JetStream 활성화 (메시지 영속성 지원)
+- 고가용성을 위한 클러스터 모드 활성화
+
+### 변경 내역
+
+#### 1. 클러스터 모드 활성화
+**파일**: values.yaml
+**경로**: config.cluster.enabled
+- **변경 전**: `false`
+- **변경 후**: `true`
+- **설명**: 3개 레플리카로 구성된 NATS 클러스터 활성화
+
+#### 2. JetStream 활성화
+**파일**: values.yaml
+**경로**: config.jetstream.enabled
+- **변경 전**: `false`
+- **변경 후**: `true`
+- **설명**: 메시지 영속성 및 스트림 기능 활성화
+
+### 유지된 기본 설정
+- **Replicas**: 3 (클러스터 노드 수)
+- **JetStream PVC 크기**: 10Gi
+- **FileStore 디렉토리**: /data
+- **NATS 포트**: 4222
+- **Cluster 포트**: 6222
+- **Monitor 포트**: 8222
+
+### 주의사항
+⚠️ **배포 전 확인 필요**:
+1. `storageClassName` 설정 필요 (config.jetstream.fileStore.pvc.storageClassName)
+   - 사용 가능한 스토리지 클래스 확인: `kubectl get storageclass`
+   - 기본 스토리지 클래스를 사용하려면 비워두거나 제거
+
+2. 네임스페이스 확인
+   - 배포할 네임스페이스에 충분한 리소스가 있는지 확인
+
+3. PV/PVC 요구사항
+   - 각 레플리카당 10Gi의 영구 볼륨 필요 (총 30Gi)
+
+### 배포 명령어 예시
+```bash
+# 네임스페이스 생성 (필요시)
+kubectl create namespace nats
+
+# 스토리지 클래스 확인
+kubectl get storageclass
+
+# Helm 설치
+helm install nats ./chart/nats -n nats
+
+# 또는 values.yaml 수정 후
+helm install nats ./chart/nats -n nats -f ./chart/nats/values.yaml
+```
+
+### 롤백 방법
+원래 설정으로 되돌리려면:
+```yaml
+config:
+  cluster:
+    enabled: false
+  jetstream:
+    enabled: false
+```
+
+---
+**변경자**: GitHub Copilot
+**적용 상태**: ✅ 배포 완료
+
+## 배포 정보
+
+**배포 일시**: 2026-01-28 19:38:58
+**네임스페이스**: upm-messaging
+**릴리스 이름**: nats
+**차트 버전**: Helm chart (local)
+
+### 배포된 리소스
+- **StatefulSet**: nats (3 replicas)
+- **Pods**: 
+  - nats-0 (Running)
+  - nats-1 (Running)
+  - nats-2 (Running)
+  - nats-box (Running)
+- **Services**:
+  - nats (ClusterIP: 10.43.123.199)
+  - nats-headless (Headless Service)
+- **PersistentVolumeClaims**: 
+  - nats-js-nats-0 (10Gi, Bound, local-path)
+  - nats-js-nats-1 (10Gi, Bound, local-path)
+  - nats-js-nats-2 (10Gi, Bound, local-path)
+
+### 접속 정보
+- **클러스터 내부 접속**: nats.upm-messaging.svc.cluster.local:4222
+- **Headless Service**: nats-headless.upm-messaging.svc.cluster.local:4222
+
+### 확인 명령어
+```bash
+# Pod 상태 확인
+kubectl get pods -n upm-messaging
+
+# 서비스 확인
+kubectl get svc -n upm-messaging
+
+# PVC 확인
+kubectl get pvc -n upm-messaging
+
+# NATS 로그 확인
+kubectl logs -n upm-messaging nats-0
+
+# nats-box로 테스트
+kubectl exec -it -n upm-messaging deployment/nats-box -- nats server list
+```

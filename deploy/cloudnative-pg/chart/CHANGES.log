@@ -1,0 +1,73 @@
+# CHANGES.log
+# 목적: 적용/변경 이력 기록용 (원래값/변경값/변경내용)
+# 작성 규칙
+# - 날짜(YYYY-MM-DD)와 작성자(또는 이니셜) 포함
+# - 변경 대상/경로 명시
+# - 원래값/변경값/변경내용을 반드시 기록
+# - 필요 시 관련 티켓/PR 번호 추가
+
+# 템플릿
+# [YYYY-MM-DD] [작성자] [대상]
+# - 원래값: 
+# - 변경값: 
+# - 변경내용: 
+# - 참고: (선택)
+
+[2026-02-02] [codex] [cloudnativepg/chart/cloudnative-pg]
+- 원래값: (없음) CHANGES.log 미존재
+- 변경값: CHANGES.log 생성 및 기록 템플릿 추가
+- 변경내용: 변경 이력 기록을 위한 로그 파일 생성
+
+[2026-02-02] [codex] [cloudnativepg/chart/cloudnative-pg]
+- 원래값: cloudnative-pg Helm 차트 tgz만 존재
+- 변경값: cloudnativepg/chart/cloudnative-pg 디렉토리로 압축 해제
+- 변경내용: 로컬 차트 디렉토리 기반 설치 준비
+
+[2026-02-02] [codex] [cloudnativepg/chart/cloudnative-pg]
+- 원래값: cloudnative-pg-0.27.0.tgz 존재
+- 변경값: tgz 삭제
+- 변경내용: 불필요한 압축 파일 정리
+
+[2026-02-02] [codex] [upm-database namespace]
+- 원래값: CNPG 오퍼레이터 미설치
+- 변경값: Helm release "cnpg" 설치(로컬 차트 사용)
+- 변경내용: cloudnativepg/chart/cloudnative-pg 기반으로 오퍼레이터 배포
+
+[2026-02-02] [codex] [cloudnativepg/chart/cloudnative-pg/cluster-upmdb.yaml]
+- 원래값: (없음)
+- 변경값: upmdb 클러스터 매니페스트 추가
+- 변경내용: instances=3, storage=5Gi, initdb.database=upmdb 설정
+[2026-02-02] [codex] [upm-database namespace]
+- 원래값: upmdb-cluster 미생성
+- 변경값: upmdb-cluster 생성
+- 변경내용: cluster-upmdb.yaml 적용으로 PostgreSQL 클러스터 리소스 생성
+- 참고: kubectl apply -f cloudnativepg/chart/cloudnative-pg/cluster-upmdb.yaml
+[2026-02-02] [codex] [전체 진행 요약]
+- 원래값: CloudNativePG 오퍼레이터/CRD 및 DB/Pooler 미설치
+- 변경값: CNPG 오퍼레이터 설치, upmdb 클러스터 생성, PgBouncer Pooler 매니페스트 작성
+- 변경내용: 아래 절차/값 기준으로 재현 가능하도록 정리
+
+[2026-02-02] [codex] [설치 절차]
+- 원래값: (없음)
+- 변경값: 로컬 차트 기반 설치 및 리소스 생성 순서 확립
+- 변경내용:
+  1) 오퍼레이터 설치(로컬 차트)
+     - 명령: helm upgrade --install cnpg ./cloudnativepg/chart/cloudnative-pg -n upm-database --create-namespace
+  2) DB 클러스터 생성
+     - 매니페스트: cloudnativepg/chart/cloudnative-pg/cluster-upmdb.yaml
+     - 내용: instances=3, storage.size=5Gi, bootstrap.initdb.database=upmdb
+     - 명령: kubectl apply -f cloudnativepg/chart/cloudnative-pg/cluster-upmdb.yaml
+  3) PgBouncer Pooler 매니페스트 작성 (적용은 아직 안 함)
+     - 매니페스트: cloudnativepg/chart/cloudnative-pg/pooler-upmdb.yaml
+     - 내용: cluster.name=upmdb-cluster, instances=2, type=rw, pgbouncer.poolMode=session
+     - 적용 명령(참고): kubectl apply -f cloudnativepg/chart/cloudnative-pg/pooler-upmdb.yaml
+
+[2026-02-02] [codex] [pooler-upmdb.yaml]
+- 원래값: (없음)
+- 변경값: PgBouncer Pooler 매니페스트 파일 생성
+- 변경내용: upmdb 클러스터에 연결되는 Pooler 리소스 정의(2 replicas, rw 서비스)
+[2026-02-02] [codex] [upm-database namespace]
+- 원래값: PgBouncer Pooler 미적용 상태
+- 변경값: Pooler 리소스 적용(현행 유지: unchanged)
+- 변경내용: pooler-upmdb.yaml 적용으로 upmdb-pooler 리소스 상태 확인
+- 참고: kubectl apply -f cloudnativepg/chart/cloudnative-pg/pooler-upmdb.yaml

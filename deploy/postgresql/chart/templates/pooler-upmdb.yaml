@@ -1,0 +1,51 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Pooler
+metadata:
+  name: upmdb-pooler
+  namespace: {{ .Release.Namespace }}
+spec:
+  cluster:
+    name: upmdb-cluster
+  instances: 2
+  serviceTemplate:
+    spec:
+      type: {{ .Values.upmdb.pooler.service.type | quote }}
+      ports:
+        - port: 5432
+          targetPort: 5432
+          {{- if eq .Values.upmdb.pooler.service.type "NodePort" }}
+          nodePort: {{ .Values.upmdb.pooler.service.nodePort }}
+          {{- end }}
+  deploymentStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  type: rw
+  pgbouncer:
+    poolMode: session
+  template:
+    metadata:
+      labels:
+        app: pgbouncer
+    spec:
+      nodeSelector:
+        node-group.ntels.io/type: upm-app
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  cnpg.io/poolerName: upmdb-pooler
+              topologyKey: kubernetes.io/hostname
+      tolerations:
+        - key: node.kubernetes.io/not-ready
+          operator: Exists
+          effect: NoExecute
+          tolerationSeconds: 10
+        - key: node.kubernetes.io/unreachable
+          operator: Exists
+          effect: NoExecute
+          tolerationSeconds: 10
+      containers:
+        - name: pgbouncer

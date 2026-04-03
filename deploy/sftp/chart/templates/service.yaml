@@ -1,0 +1,42 @@
+{{- $root := . -}}
+{{- range $index, $service := .Values.services }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "sftp.fullname" $root }}-{{ $service.name }}
+  labels:
+    {{- include "sftp.labels" $root | nindent 4 }}
+  {{- if or $service.annotations $service.addressPool }}
+  annotations:
+    {{- if $service.addressPool }}
+    metallb.io/address-pool: {{ $service.addressPool | quote }}
+    {{- end }}
+    {{- range $key, $value := $service.annotations }}
+    {{ $key }}: {{ tpl $value $root | quote }}
+    {{- end }}
+  {{- end }}
+spec:
+  type: {{ default $root.Values.service.type $service.type }}
+  {{- if $service.loadBalancerIP }}
+  loadBalancerIP: {{ $service.loadBalancerIP }}
+  {{- end }}
+  {{- if or $service.loadBalancerClass $root.Values.service.loadBalancerClass }}
+  loadBalancerClass: {{ default $root.Values.service.loadBalancerClass $service.loadBalancerClass }}
+  {{- end }}
+  {{- if hasKey $service "allocateLoadBalancerNodePorts" }}
+  allocateLoadBalancerNodePorts: {{ $service.allocateLoadBalancerNodePorts }}
+  {{- else if hasKey $root.Values.service "allocateLoadBalancerNodePorts" }}
+  allocateLoadBalancerNodePorts: {{ $root.Values.service.allocateLoadBalancerNodePorts }}
+  {{- end }}
+  {{- if or $service.externalTrafficPolicy $root.Values.service.externalTrafficPolicy }}
+  externalTrafficPolicy: {{ default $root.Values.service.externalTrafficPolicy $service.externalTrafficPolicy }}
+  {{- end }}
+  ports:
+  - port: {{ default $root.Values.service.port $service.port }}
+    targetPort: {{ default $root.Values.service.targetPort $service.targetPort }}
+    protocol: TCP
+    name: ssh
+  selector:
+    {{- include "sftp.selectorLabels" $root | nindent 4 }}
+{{- end }}
