@@ -32,3 +32,544 @@ storageclass 지정
 
 nats >> 
 노드 포트 가능
+
+
+================================================================================
+[2026-04-03] Kubernetes 네트워크 인터페이스 변경 후 Liveness Probe 이슈
+================================================================================
+
+## 문제 상황
+
+### 초기 설정
+- K8s 초기 설치 시: eth0 = 외부망 + 클러스터망, eth1 = 미사용
+- Calico CNI가 eth0 기반으로 클러스터 네트워크 구성
+
+### 변경 후 설정
+- eth0 = 외부망 (10.255.254.0/24)
+- eth1 = 클러스터 내부망 (192.168.0.0/24)
+- 노드의 INTERNAL-IP는 eth1(192.168.0.x)로 정상 등록됨
+
+### 발생한 문제
+1. **Liveness Probe 실패**
+   - Multus를 사용하는 tcp-bridge pod에서 liveness probe 타임아웃 발생
+   - Pod는 eth0(Calico 10.244.x.x) + net1(Multus 10.255.254.x) 두 개 인터페이스 보유
+
+2. **근본 원인**
+   - Worker 노드의 default route가 eth0로 설정 (metric 100 > eth1 metric 101)
+   - kubelet이 pod로 liveness probe HTTP 요청 시 출발지 IP로 eth0 IP 사용
+   - pod의 eth0(Calico network)로 요청이 도달하지만 응답이 실패
+   - **비대칭 라우팅 문제**: eth0로 들어온 요청이 default route를 따라 eth0로 나가려고 시도
+
+3. **추가 발견 이슈**
+   - NetworkAttachmentDefinition 템플릿에 gateway 설정 누락
+   - values.yaml에는 gateway 정의되어 있으나 실제 NAD spec에 미반영
+
+
+## 해결 방법
+
+### 1. NetworkAttachmentDefinition 템플릿 수정
+**파일**: deploy/tcp-bridge/chart/templates/networkattachmentdefinition.yaml
+
+```yaml
+# 변경 전
+"ipam": {
+  "type": {{ .Values.multus.network.ipam.type | quote }}
+  {{- if .Values.multus.network.ipam.routes }}
+  ,
+  "routes": {{ .Values.multus.network.ipam.routes | toJson }}
+  {{- end }}
+}
+
+# 변경 후
+"ipam": {
+  "type": {{ .Values.multus.network.ipam.type | quote }}
+  {{- if .Values.multus.network.ipam.gateway }}
+  ,
+  "gateway": {{ .Values.multus.network.ipam.gateway | quote }}
+  {{- end }}
+  {{- if .Values.multus.network.ipam.routes }}
+  ,
+  "routes": {{ .Values.multus.network.ipam.routes | toJson }}
+  {{- end }}
+}
+```
+
+### 2. Kubelet --node-ip 설정 (핵심 해결책)
+모든 노드의 kubelet에 명시적으로 --node-ip 설정하여 eth1 인터페이스 사용 강제
+
+**각 노드별 설정** (/etc/sysconfig/kubelet):
+```bash
+# Master node (10.255.254.22)
+KUBELET_EXTRA_ARGS="--node-ip=192.168.0.10"
+
+# Worker nodes
+worker-ems01 (10.255.254.23): --node-ip=192.168.0.11
+worker-ems02 (10.255.254.24): --node-ip=192.168.0.12
+worker-app01 (10.255.254.25): --node-ip=192.168.0.13
+worker-app02 (10.255.254.26): --node-ip=192.168.0.14
+worker-app03 (10.255.254.27): --node-ip=192.168.0.15
+```
+
+**적용 명령**:
+```bash
+systemctl restart kubelet
+```
+
+**효과**: 
+- kubelet의 모든 통신(liveness/readiness probe 포함)이 eth1(192.168.0.x)을 source IP로 사용
+- Calico pod network(10.244.x.x)와 동일 대역이므로 라우팅 문제 해결
+
+### 3. Multus 설정 개선 (values.yaml)
+**파일**: deploy/tcp-bridge/chart/values.yaml
+
+```yaml
+# 변경 전
+multus:
+  network:
+    type: "ipvlan"
+    mode: "l3"
+    ipam:
+      gateway: "10.255.254.1"
+      routes: []
+
+# 변경 후
+multus:
+  network:
+    type: "macvlan"      # ipvlan → macvlan
+    mode: "bridge"       # l3 → bridge
+    ipam:
+      gateway: "10.255.254.1"
+      routes:
+        - dst: "192.168.15.0/24"    # 외부 시스템 대역 라우팅
+          gw: "10.255.254.1"
+```
+
+### 4. InitContainer 제거
+초기에 policy routing을 위한 initContainer를 추가했으나, kubelet --node-ip 설정으로 
+문제가 해결되어 불필요해짐 → deployment-0.yaml, deployment-1.yaml에서 제거
+
+
+## 확인 사항
+
+### Kubelet이 올바른 인터페이스 사용하는지 확인
+```bash
+# kubelet 프로세스 확인
+ps aux | grep kubelet | grep node-ip
+
+# 결과 예시
+/usr/bin/kubelet ... --node-ip=192.168.0.13
+```
+
+### Pod 네트워크 테스트
+```bash
+# Worker 노드에서 pod의 Calico IP로 health check
+curl http://10.244.110.62:8080/health     # 성공해야 함
+
+# Worker 노드에서 pod의 Multus IP로 health check  
+curl http://10.255.254.101:8080/health    # 타임아웃 (정상, multus는 외부 통신용)
+```
+
+### 라우팅 테이블 확인
+```bash
+# Worker 노드 라우팅
+ip route show
+# default via 10.255.254.1 dev eth0 proto static metric 100
+# default via 192.168.0.1 dev eth1 proto static metric 101
+# → metric 값과 무관하게 --node-ip로 인터페이스 강제됨
+```
+
+
+## 교훈
+
+1. **인터페이스 변경 시 kubelet 재설정 필수**
+   - 단순히 노드 IP 변경만으로는 불충분
+   - kubelet이 어떤 인터페이스를 사용할지 명시적으로 지정해야 함
+
+2. **Multus 사용 시 NAD 템플릿 검증 필요**
+   - values.yaml 설정이 실제 리소스에 제대로 반영되는지 확인
+   - gateway, routes 등 중요 설정 누락 방지
+
+3. **Liveness Probe 디버깅**
+   - Pod 내부가 아닌 kubelet → pod 경로의 네트워크 확인
+   - tcpdump, curl 테스트로 source IP 및 라우팅 검증
+
+4. **Default route의 함정**
+   - metric 값으로 우선순위가 정해지므로 의도와 다르게 동작 가능
+   - --node-ip로 명시적 지정이 더 안전
+
+
+================================================================================
+[2026-04-03] Calico IP Autodetection 문제 및 해결
+================================================================================
+
+## 문제 상황
+
+### 발견 경위
+- kubelet --node-ip 설정 후에도 liveness probe 실패 지속
+- 조사 결과 Calico가 eth0 인터페이스를 사용 중으로 확인
+- Calico pod 로그: "Using autodetected IPv4 address 10.255.254.25/24 on interface eth0"
+
+### 근본 원인
+- Calico는 설치 시 자동으로 첫 번째 발견된 인터페이스(eth0)를 선택
+- IP_AUTODETECTION_METHOD 환경변수가 설정되어 있지 않음
+- BGP peering, IPIP tunneling이 모두 eth0 기반으로 설정됨
+
+## 해결 방법
+
+### Calico DaemonSet 환경변수 설정
+```bash
+kubectl set env daemonset/calico-node -n kube-system IP_AUTODETECTION_METHOD=interface=eth1
+```
+
+**효과**:
+- Calico pod가 자동으로 재시작됨
+- 모든 calico-node가 eth1 (192.168.0.x) 인터페이스 사용
+
+### 적용 확인
+```bash
+# Calico pod 로그 확인
+kubectl logs -n kube-system calico-node-xxxxx | grep "autodetected"
+
+# 성공 예시
+2026-04-03 12:34:56.789 [INFO][8] startup/autodetection.go 100: Using autodetected IPv4 address 192.168.0.13/24 on matching interface eth1
+```
+
+### 노드 재부팅
+- Calico 설정 변경 후 모든 노드 순차 재부팅(권장)
+- 재부팅 순서: worker-ems01,02 → worker-app01,02,03 → master-node
+
+## 확인 사항
+
+### Calico Node Status
+```bash
+kubectl get nodes -o wide
+# INTERNAL-IP 컬럼이 모두 192.168.0.x (eth1)로 표시되어야 함
+```
+
+### BGP Peering
+```bash
+# calicoctl 사용 (설치 필요)
+calicoctl node status
+
+# 모든 BGP peer가 192.168.0.x 주소 사용 확인
+```
+
+## 교훈
+
+1. **CNI 인터페이스 설정 확인 필수**
+   - kubelet뿐만 아니라 CNI도 올바른 인터페이스 사용하도록 설정
+   - Calico, Flannel, Cilium 등 각 CNI마다 설정 방법 다름
+
+2. **자동 감지(Auto-detection)의 위험성**
+   - 멀티 인터페이스 환경에서는 명시적 설정 필수
+   - 첫 번째 인터페이스가 항상 올바른 선택은 아님
+
+3. **변경 후 검증**
+   - 설정 변경 후 pod 로그로 실제 적용 여부 확인
+   - node status뿐만 아니라 tunnel, BGP endpoint도 체크
+
+
+================================================================================
+[2026-04-03] 미해결: Source IP 선택 문제
+================================================================================
+
+## 문제 상황
+
+### 현재 상태
+- ✅ Calico: eth1 (192.168.0.x) 사용 확인
+- ✅ kubelet: --node-ip=192.168.0.x 설정 완료
+- ✅ Node INTERNAL-IP: 192.168.0.x 정상 표시
+- ❌ 실제 패킷 source IP: 여전히 eth0 (10.255.254.x) 사용
+
+### 검증 방법
+```bash
+# Worker 노드에서 pod IP로 경로 확인
+ip route get 10.244.x.x
+
+# 결과:
+10.244.x.x dev caliveth123abc src 10.255.254.25
+                                   ^^^^^^^^^^^^^ (eth0 IP)
+# 기대값: src 192.168.0.13 (eth1 IP)
+```
+
+### 근본 원인
+**Linux 커널의 source IP 선택 알고리즘**
+1. 커널은 default route의 metric 우선순위로 source IP 선택
+2. 현재 라우팅 테이블:
+   ```
+   default via 10.255.254.1 dev eth0 metric 100  ← 우선순위 높음
+   default via 192.168.0.1 dev eth1 metric 101   ← 우선순위 낮음
+   ```
+3. metric 100 < 101이므로 eth0 IP를 source로 선택
+4. kubelet --node-ip 설정은 API 서버 등록용이며, 실제 패킷 source IP에는 영향 없음
+
+## 시도한 해결 방법들
+
+### 1. Metric 값 변경 시도
+```bash
+# worker-app01에서 시도
+ip route add default via 192.168.0.1 dev eth1 metric 50 src 192.168.0.13
+
+# 결과: SSH 연결 끊김 (실패)
+# 원인: eth1은 내부망만 연결, 외부 인터넷 접속 불가
+```
+
+### 2. NetworkManager connection metric 변경 시도
+```bash
+# worker-app02에서 시도
+nmcli connection modify eth1 ipv4.route-metric 50
+nmcli connection modify eth0 ipv4.route-metric 200
+
+# 결과: 
+default via 192.168.0.1 dev eth1 metric 50   ← eth1 우선
+default via 10.255.254.1 dev eth0 metric 200
+
+# 문제: SSH 연결 끊김 (외부에서 접속 불가)
+```
+
+### 3. 복구 작업
+```bash
+# 두 노드 모두 원래 metric으로 복구 완료
+default via 10.255.254.1 dev eth0 metric 100
+default via 192.168.0.1 dev eth1 metric 101
+```
+
+## 왜 해결할 수 없는가
+
+### 네트워크 구조의 제약
+```
+eth0 (10.255.254.0/24): 외부 인터넷 + 외부 시스템 접속용
+  - 외부 관리자 SSH 접속
+  - 외부 시스템(192.168.15.x)과 통신
+  - 인터넷 패키지 다운로드
+
+eth1 (192.168.0.0/24): K8s 클러스터 내부 전용
+  - Calico pod network (10.244.0.0/16)
+  - 노드간 통신
+  - **외부 인터넷 연결 없음**
+```
+
+### 딜레마
+- **eth0를 우선순위 높게** → 외부 접속 가능, pod source IP 잘못됨
+- **eth1을 우선순위 높게** → pod source IP 정상, 외부 접속 불가
+
+## 가능한 대안 (검토 필요)
+
+### 1. Policy-based Routing
+```bash
+# pod 대역에 대해서만 eth1 source 사용
+ip rule add to 10.244.0.0/16 lookup main pref 100
+ip route add default via 192.168.0.1 dev eth1 table 100 src 192.168.0.x
+```
+**우려사항**: 
+- 복잡성 증가
+- 모든 노드에 동일 설정 필요
+- 재부팅 시 유지 필요 (systemd-networkd 또는 NetworkManager dispatcher)
+
+### 2. systemd-networkd로 전환
+NetworkManager 대신 systemd-networkd 사용 시 더 정교한 routing 제어 가능
+```ini
+[Route]
+Gateway=192.168.0.1
+PreferredSource=192.168.0.13
+Table=main
+Metric=101
+Scope=link
+```
+
+### 3. Calico IP-in-IP 비활성화
+IPIP 터널 대신 direct routing 사용 시 source IP 문제 개선 가능성
+- 단, 노드간 L2 연결 필요
+
+### 4. 현 상태 유지 (권장)
+- tcp-bridge 애플리케이션은 net1 (Multus macvlan)으로 실제 트래픽 처리
+- Liveness probe 실패는 허용 (또는 liveness 비활성화)
+- Calico network는 정상 동작 중
+
+## 결론
+
+**현재 상태로 운영 가능:**
+1. Calico는 eth1 기반으로 정상 동작
+2. Pod 간 통신 정상
+3. Multus를 통한 외부 시스템 통신 정상
+4. Liveness probe 실패는 메트릭/로그 노이즈이지만 서비스 영향 없음
+
+**추가 조치가 필요한 경우:**
+- Policy-based routing 구현 (전문가 리뷰 권장)
+- Calico community에 문의
+- 또는 systemd-networkd 기반 재구성
+
+**문서화 완료:** 2026-04-03
+**담당자:** 추후 정책 결정 필요
+
+
+================================================================================
+[2026-04-03] Calico IP Autodetection 문제 - Source IP 선택 이슈  
+================================================================================
+
+## 문제 상황
+
+### 증상
+- kubelet에 `--node-ip=192.168.0.x` (eth1) 설정했음에도 불구하고
+- 실제 pod로 접근 시 source IP가 여전히 eth0 IP 사용
+- worker-app02 예시:
+  ```
+  ip route get 10.244.240.93
+  → 10.244.240.93 dev calidddec13f518 src 10.255.254.26 (eth0)
+     (기대값: src 192.168.0.14)
+  ```
+
+### 원인 분석
+
+1. **Calico IP Autodetection 미설정**
+   ```bash
+   kubectl get ds calico-node -n kube-system -o yaml | grep IP_AUTODETECTION
+   # 결과: 설정 없음 (기본값 사용)
+   ```
+   
+   - Calico가 초기 설치 시 eth0 기반으로 자동 감지
+   - `IP_AUTODETECTION_METHOD` 환경변수 미설정
+   - 기본 동작: first-found 방식으로 인터페이스 선택 (eth0 우선 선택)
+
+2. **인터페이스 Metric 우선순위 문제**
+   ```bash
+   ip route show
+   default via 10.255.254.1 dev eth0 proto static metric 100  # 우선순위 높음
+   default via 192.168.0.1 dev eth1 proto static metric 101   # 우선순위 낮음
+   10.255.254.0/24 dev eth0 proto kernel scope link src 10.255.254.26 metric 100
+   192.168.0.0/24 dev eth1 proto kernel scope link src 192.168.0.14 metric 101
+   ```
+   
+   - metric 값이 낮을수록 우선순위 높음
+   - eth0 (metric 100) > eth1 (metric 101)
+   - 커널이 source IP 선택 시 metric이 낮은 eth0의 IP 사용
+
+3. **결과적 문제**
+   - Calico가 eth0 기반으로 BGP peering 및 IPIP 터널 구성
+   - Local pod로의 패킷도 eth0 기반 source IP 사용
+   - Liveness/Readiness Probe 실패: "no route to host"
+
+
+## 해결 방법
+
+### 1. Calico IP Autodetection Method 설정 ⭐ 핵심
+
+**명령어**:
+```bash
+kubectl set env daemonset/calico-node -n kube-system \
+  IP_AUTODETECTION_METHOD=interface=eth1
+```
+
+**자동으로 발생하는 변화**:
+- DaemonSet 환경변수 업데이트
+- calico-node pod들 자동 재시작 (일부만 재시작될 수 있음)
+- BGP peering 재구성 (eth1 IP 사용)
+- IPIP 터널 재구성
+
+**확인 방법**:
+```bash
+# 모든 calico-node pod 재시작 확인
+kubectl get pods -n kube-system -l k8s-app=calico-node
+
+# 필요시 수동 재시작
+kubectl delete pod -n kube-system -l k8s-app=calico-node
+
+# 설정 적용 확인
+kubectl exec -n kube-system calico-node-xxxx -- env | grep IP_AUTODETECTION
+# 결과: IP_AUTODETECTION_METHOD=interface=eth1
+
+# 로그에서 eth1 감지 확인
+kubectl logs -n kube-system calico-node-xxxx | grep "autodetected IPv4"
+# 결과: Using autodetected IPv4 address 192.168.0.14/24 on matching interface eth1
+```
+
+### 2. 인터페이스 Metric 변경 (선택사항)
+
+**⚠️ 주의**: 네트워크 재시작으로 SSH 연결 끊김 가능, 유지보수 시간에 진행 권장
+
+**각 노드별 설정** (NetworkManager 사용 시):
+```bash
+# Connection 이름 확인
+nmcli connection show
+
+# Metric 변경
+nmcli connection modify "System eth0" ipv4.route-metric 200
+nmcli connection modify eth1 ipv4.route-metric 50
+
+# 적용 (네트워크 재시작, SSH 끊김 주의!)
+nmcli connection up "System eth0"
+nmcli connection up eth1
+
+# 또는 노드 재부팅으로 안전하게 적용
+systemctl reboot
+```
+
+**목적**: 
+- eth1을 primary 인터페이스로 만들어 source IP 선택 보장
+- Calico만 수정해도 문제 해결되지만, 명시적 우선순위 설정으로 안정성 향상
+
+### 3. 검증
+
+**Source IP 확인**:
+```bash
+# 각 노드에서
+ip route get 10.244.x.x
+# 기대 결과: src 192.168.0.x (eth1 IP)
+
+# Pod 연결 테스트
+curl http://10.244.x.x:8080/health
+# 성공해야 함
+```
+
+**Liveness Probe 정상 작동 확인**:
+```bash
+kubectl get pods -n upm-app
+# tcp-bridge pod들이 Running, Ready 1/1 상태
+```
+
+
+## Calico 관련 추가 설정 옵션
+
+### IP Autodetection Method 다른 옵션들
+
+```bash
+# 특정 인터페이스 지정 (현재 사용)
+IP_AUTODETECTION_METHOD=interface=eth1
+
+# 인터페이스 regex
+IP_AUTODETECTION_METHOD=interface=eth.*
+
+# CIDR 기반
+IP_AUTODETECTION_METHOD=cidr=192.168.0.0/24
+
+# 제외 방식
+IP_AUTODETECTION_METHOD=skip-interface=eth0
+
+# Can-reach (특정 IP에 도달 가능한 인터페이스)
+IP_AUTODETECTION_METHOD=can-reach=192.168.0.1
+```
+
+
+## 교훈
+
+1. **CNI 초기 설치 시 네트워크 인터페이스 명확히 지정**
+   - Calico, Flannel 등 대부분 CNI는 IP autodetection 기능 제공
+   - 멀티 인터페이스 환경에서는 명시적 설정 필수
+   - 초기 설치 시 잘못 설정하면 전체 재구성 필요
+
+2. **인터페이스 변경 시 CNI 재설정 필수**
+   - 노드 IP만 변경해도 CNI는 기존 설정 유지
+   - Pod → Pod 통신은 CNI가 관리하므로 CNI 설정 변경해야 함
+   - kubelet --node-ip만으로는 불충분
+
+3. **Metric 값의 중요성**
+   - Linux 커널의 source IP 선택은 metric에 영향받음
+   - 의도한 인터페이스가 primary가 되도록 metric 설정 필요
+   - NetworkManager, systemd-networkd 등 네트워크 관리 도구별로 설정 방법 다름
+
+4. **네트워크 변경 작업 순서**
+   - ① Calico/CNI 설정 변경 (IP_AUTODETECTION_METHOD)
+   - ② CNI pod 재시작 및 확인
+   - ③ kubelet --node-ip 설정 (이미 완료)
+   - ④ 필요 시 인터페이스 metric 조정
+   - ⑤ 검증 및 모니터링

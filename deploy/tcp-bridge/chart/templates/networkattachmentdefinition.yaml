@@ -1,0 +1,32 @@
+{{- if and .Values.multus.enabled .Values.multus.createNAD }}
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: {{ .Values.multus.network.name }}
+  {{- $nadNamespace := .Values.multus.network.namespace | default .Release.Namespace }}
+  namespace: {{ $nadNamespace }}
+  labels:
+    {{- include "tcp-bridge.labels" . | nindent 4 }}
+spec:
+  config: |
+    {
+      "cniVersion": {{ .Values.multus.network.cniVersion | quote }},
+      "type": {{ .Values.multus.network.type | quote }},
+      "master": {{ .Values.multus.network.master | quote }},
+      "mode": {{ .Values.multus.network.mode | quote }},
+      {{- if gt (int (.Values.multus.network.mtu | default 0)) 0 }}
+      "mtu": {{ .Values.multus.network.mtu }},
+      {{- end }}
+      "ipam": {
+        "type": {{ .Values.multus.network.ipam.type | quote }}
+        {{- if .Values.multus.network.ipam.gateway }}
+        ,
+        "gateway": {{ .Values.multus.network.ipam.gateway | quote }}
+        {{- end }}
+        {{- if .Values.multus.network.ipam.routes }}
+        ,
+        "routes": {{ .Values.multus.network.ipam.routes | toJson }}
+        {{- end }}
+      }
+    }
+{{- end }}
