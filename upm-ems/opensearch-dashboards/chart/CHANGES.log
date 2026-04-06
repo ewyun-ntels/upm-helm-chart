@@ -1,0 +1,108 @@
+==================================================================
+OpenSearch Dashboards Helm Chart Values 수정 이력
+==================================================================
+수정 일시: 2026-01-28
+네임스페이스: upm-logging
+릴리스명: (설치 시 지정)
+
+==================================================================
+수정 내역
+==================================================================
+
+1. OpenSearch 연결 호스트 (opensearchHosts)
+   설명: OpenSearch 클러스터 접속을 위한 FQDN 설정
+   원본값: "https://opensearch-cluster-master:9200"
+   변경값: "https://opensearch-cluster-master.upm-logging.svc.cluster.local:9200"
+   이유: 네임스페이스 간 통신을 위해 전체 FQDN 필요
+         같은 네임스페이스가 아니면 짧은 이름으로 접근 불가
+
+2. OpenSearch 인증 정보 (extraEnvs)
+   설명: OpenSearch 접속을 위한 사용자 인증 정보 환경변수 추가
+   원본값: []
+   변경값: 
+     - OPENSEARCH_USERNAME: "admin"
+     - OPENSEARCH_PASSWORD: "MySecure123!Strong"
+   이유: OpenSearch 2.12+ 버전은 보안이 기본 활성화됨
+         인증 정보 없이는 Dashboards가 OpenSearch에 연결 불가
+   주의: 프로덕션 환경에서는 Kubernetes Secret 사용 권장
+
+3. 서비스 타입 (service.type)
+   설명: 외부 접근을 위한 서비스 타입 변경
+   원본값: ClusterIP
+   변경값: NodePort
+   이유: ClusterIP는 클러스터 내부에서만 접근 가능
+         NodePort를 통해 외부에서 브라우저로 접근 가능
+   대안: Ingress 사용 시 ClusterIP 유지 가능
+
+4. NodePort 번호 지정 (service.nodePort)
+   설명: 외부 접근을 위한 고정 NodePort 번호 설정
+   원본값: "" (자동 할당)
+   변경값: "30601"
+   이유: 고정 포트 번호로 접속 URL 일관성 유지
+         범위: 30000-32767 (Kubernetes NodePort 기본 범위)
+
+==================================================================
+현재 적용된 주요 설정
+==================================================================
+
+연결 정보:
+  - OpenSearch Host: opensearch-cluster-master.upm-logging.svc.cluster.local:9200
+  - Protocol: HTTPS
+  - Username: admin
+  - Password: MySecure123!Strong
+
+서비스:
+  - Type: NodePort
+  - Port: 5601
+  - NodePort: 30601 (고정)
+  - Metrics Port: 9601
+
+레플리카:
+  - replicaCount: 1
+
+==================================================================
+접속 방법
+==================================================================
+
+1. NodePort로 접속:
+   kubectl get svc -n upm-logging | grep dashboards
+   
+   출력 예시:
+   opensearch-dashboards   NodePort   10.x.x.x   <none>   5601:30601/TCP
+
+   접속 URL:
+   http://<NodeIP>:30601
+
+2. 포트 포워딩 사용:
+   kubectl port-forward -n upm-logging svc/opensearch-dashboards 5601:5601
+   
+   접속 URL:
+   http://localhost:5601
+
+3. 로그인 정보:
+   Username: admin
+   Password: MySecure123!Strong
+
+==================================================================
+보안 권장사항
+==================================================================
+
+1. 비밀번호 관리:
+   - 현재 평문으로 values.yaml에 저장됨
+   - Kubernetes Secret 생성 후 envFrom으로 참조 권장
+   
+   Secret 생성 예시:
+   kubectl create secret generic opensearch-dashboards-creds \
+     --from-literal=username=admin \
+     --from-literal=password=MySecure123!Strong \
+     -n upm-logging
+
+2. 서비스 노출:
+   - 프로덕션 환경에서는 Ingress + TLS 사용 권장
+   - NodePort는 개발/테스트 환경에 적합
+
+3. HTTPS 설정:
+   - 현재 OpenSearch 연결은 HTTPS (tls.verify Off)
+   - Dashboard 자체 HTTPS 설정도 고려 필요
+
+==================================================================

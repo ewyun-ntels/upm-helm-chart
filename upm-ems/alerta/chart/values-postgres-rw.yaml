@@ -1,0 +1,43 @@
+replicaCount: 2
+
+image:
+  repository: alerta/alerta-web
+  pullPolicy: IfNotPresent
+  tag: ""
+
+service:
+  type: NodePort
+  port: 8080
+  nodePort: 30880
+
+containerPort: 8080
+
+ingress:
+  enabled: false
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+podAntiAffinity:
+  enabled: true
+  type: preferred
+  topologyKey: kubernetes.io/hostname
+
+env:
+  DEBUG: "false"
+  SQLALCHEMY_POOL_RECYCLE: "300"
+  ALLOWED_ENVIRONMENTS: "Production,Development,RealTimeAlert,MetricAlert"
+  DEFAULT_ENVIRONMENT: "RealTimeAlert"
+
+secret:
+  create: true
+  name: alerta-secrets
+  stringData:
+    DATABASE_URL: postgresql://upmdb:z11HINg7QYfUbl1FXT5qMSQrjjpPyXSTmBqZmILS4cAZyGDCR7d8o0ntZFfR7sHu@upmdb-cluster-rw.upm-database.svc.cluster.local:5432/upmdb
+
+    # Must be identical across replicas for HA sessions/tokens.
+    SECRET_KEY: change-me-very-long-random-string
+
+    # API/admin keys (optional but recommended)
+    ADMIN_KEY: change-me-admin-key

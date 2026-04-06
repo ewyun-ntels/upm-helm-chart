@@ -1,6 +1,12 @@
+기본적으로 설정해야 할 것들
+
 1.
 nodeSelector:
   node-group.ntels.io/type: upm-app
+
+nodeSelector:
+  node-group.ntels.io/type=upm-ems
+
 
 2.
 # Node eviction settings
@@ -253,6 +259,81 @@ calicoctl node status
 
 # 모든 BGP peer가 192.168.0.x 주소 사용 확인
 ```
+
+
+================================================================================
+[2026-04-06] worker-ems02 Multus OOM으로 인한 Pod Sandbox 생성 실패
+================================================================================
+
+## 현상
+
+- `upm-ems` 네임스페이스의 Prometheus, Alertmanager, Grafana Pod가 `worker-ems02`에서 기동 실패
+- Pod 이벤트에 아래 오류 반복
+  - `FailedCreatePodSandBox`
+  - `plugin type="multus-shim" name="multus-cni-network" failed (add)`
+  - `CmdAdd (shim): timed out waiting for the condition`
+  - `failed to send CNI request: Post "http://dummy/cni": EOF`
+- 같은 차트/Pod가 `worker-ems01`에서는 정상 동작
+- `worker-ems02` 노드에서만 `kube-multus-ds`가 `CrashLoopBackOff`
+
+## 원인
+
+- `worker-ems02`의 `kube-multus` 컨테이너가 `OOMKilled`
+- 확인 결과:
+  - `oc describe pod -n kube-system kube-multus-ds-2shh9`
+  - `Last State: Terminated`
+  - `Reason: OOMKilled`
+  - `Exit Code: 137`
+- 당시 `kube-multus-ds` 리소스 설정:
+  - `requests.memory: 50Mi`
+  - `limits.memory: 50Mi`
+- `multus-daemon-config`는 `logLevel: "verbose"`로 설정되어 있었음
+- 결과적으로 `multus-shim -> calico` 기본 CNI 요청 처리 중 multus daemon이 메모리 부족으로 종료되어 Pod sandbox 네트워크 생성 실패
+
+## 조치 내용
+
+### 1. Multus DaemonSet 리소스 상향
+
+```bash
+oc set resources -n kube-system ds/kube-multus-ds -c kube-multus \
+  --limits=cpu=200m,memory=256Mi \
+  --requests=cpu=100m,memory=128Mi
+```
+
+### 2. Multus 로그 레벨 완화
+
+`multus-daemon-config`의 `logLevel`을 `verbose`에서 `error`로 변경
+
+```bash
+oc patch configmap -n kube-system multus-daemon-config --type merge -p '{
+  "data": {
+    "daemon-config.json": "{\n    \"chrootDir\": \"/hostroot\",\n    \"cniVersion\": \"0.3.1\",\n    \"logLevel\": \"error\",\n    \"logToStderr\": true,\n    \"cniConfigDir\": \"/host/etc/cni/net.d\",\n    \"multusAutoconfigDir\": \"/host/etc/cni/net.d\",\n    \"multusConfigFile\": \"auto\",\n    \"socketDir\": \"/host/run/multus/\"\n}\n"
+  }
+}'
+```
+
+### 3. Multus 재시작
+
+```bash
+oc rollout restart -n kube-system ds/kube-multus-ds
+oc rollout status -n kube-system ds/kube-multus-ds --timeout=180s
+```
+
+## 결과
+
+- `worker-ems02`의 multus Pod 정상 복구
+  - 예: `kube-multus-ds-zqmsz   1/1 Running`
+- `upm-ems`의 실패하던 Pod 정상 기동
+  - `alertmanager-kube-prometheus-stack-alertmanager-1   2/2 Running`
+  - `kube-prometheus-stack-grafana-0                     3/3 Running`
+  - `prometheus-kube-prometheus-stack-prometheus-1       2/2 Running`
+
+## 교훈
+
+1. `multus-shim` 오류가 보이더라도 실제 원인은 secondary network 설정이 아니라 multus daemon 자체 장애일 수 있음
+2. 특정 노드에서만 `FailedCreatePodSandBox`가 반복되면 노드별 CNI daemon 상태를 먼저 확인
+3. `kube-multus-ds`의 메모리 `50Mi`는 실제 운영 환경에서 부족할 수 있음
+4. `logLevel: verbose`는 장애 분석에는 유용하지만 메모리 사용량 증가 요인이 될 수 있음
 
 ## 교훈
 

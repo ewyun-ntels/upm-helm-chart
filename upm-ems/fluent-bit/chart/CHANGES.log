@@ -1,0 +1,80 @@
+==================================================================
+Fluent Bit Helm Chart Values 수정 이력
+==================================================================
+수정 일시: 2026-01-28
+네임스페이스: (설치 시 지정)
+차트 경로: fluentbit/chart/fluent-bit
+
+==================================================================
+수정 내역
+==================================================================
+
+1. OpenSearch 연동 설정 (config.outputs)
+   설명: Elasticsearch에서 OpenSearch로 로그 출력 대상 변경
+   
+   원본 설정:
+     Host: elasticsearch-master
+     Port: (기본값)
+     인증: 없음
+     TLS: 없음
+   
+   변경 설정:
+     Host: opensearch-cluster-master.upm-logging.svc.cluster.local
+     Port: 9200
+     HTTP_User: admin
+     HTTP_Passwd: MySecure123!Strong
+     tls: On
+     tls.verify: Off (자체 서명 인증서 허용)
+     Suppress_Type_Name: On (OpenSearch 2.x 호환성)
+   
+   추가된 설정:
+     - Logstash_Prefix kubernetes: Kubernetes 로그 인덱스명 (kubernetes-YYYY.MM.DD)
+     - Logstash_Prefix node: 호스트/노드 로그 인덱스명 (node-YYYY.MM.DD)
+
+==================================================================
+OUTPUT 플러그인 설명
+==================================================================
+
+[OUTPUT 1] Kubernetes Pod 로그
+  - Match: kube.*
+  - 수집 대상: /var/log/containers/*.log
+  - 인덱스 패턴: kubernetes-YYYY.MM.DD
+  - 필터링: kubernetes 필터로 메타데이터 추가
+
+[OUTPUT 2] 호스트/노드 로그
+  - Match: host.*
+  - 수집 대상: systemd (kubelet.service)
+  - 인덱스 패턴: node-YYYY.MM.DD
+
+==================================================================
+OpenSearch 접속 정보
+==================================================================
+
+서비스명: opensearch-cluster-master.upm-logging.svc.cluster.local
+네임스페이스: upm-logging
+포트: 9200 (HTTPS)
+사용자: admin
+비밀번호: MySecure123!Strong
+
+인덱스 확인:
+  - Kubernetes 로그: kubernetes-*
+  - 노드 로그: node-*
+
+==================================================================
+주의사항
+==================================================================
+
+1. 비밀번호 보안:
+   - 현재 values.yaml에 평문으로 저장됨
+   - 프로덕션 환경에서는 Kubernetes Secret 사용 권장
+   - envFrom을 통한 시크릿 참조 방식으로 변경 필요
+
+2. TLS 검증:
+   - tls.verify Off로 설정 (자체 서명 인증서 허용)
+   - 프로덕션 환경에서는 적절한 인증서 사용 및 검증 권장
+
+3. OpenSearch 네임스페이스:
+   - OpenSearch가 upm-logging 네임스페이스에 설치됨
+   - Fluent Bit을 다른 네임스페이스에 설치해도 서비스 FQDN으로 접근 가능
+
+==================================================================

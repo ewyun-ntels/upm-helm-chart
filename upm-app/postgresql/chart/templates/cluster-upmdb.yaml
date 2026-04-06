@@ -1,0 +1,58 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: upmdb-cluster
+  namespace: {{ .Release.Namespace }}
+spec:
+  instances: 3
+  imageName: {{ .Values.upmdb.imageName | quote }}
+  primaryUpdateMethod: switchover
+  primaryUpdateStrategy: unsupervised
+  affinity:
+    nodeSelector:
+      node-group.ntels.io/type: upm-app
+    tolerations:
+      - key: node.kubernetes.io/not-ready
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 10
+      - key: node.kubernetes.io/unreachable
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 10
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: DoNotSchedule
+      nodeAffinityPolicy: Honor
+      nodeTaintsPolicy: Honor
+      labelSelector:
+        matchLabels:
+          cnpg.io/cluster: upmdb-cluster
+          cnpg.io/podRole: instance
+  storage:
+    size: {{ .Values.upmdb.storage.size | quote }}
+    storageClass: {{ .Values.upmdb.storage.storageClass | quote }}
+  bootstrap:
+    initdb:
+      database: {{ .Values.upmdb.database | quote }}
+      owner: {{ .Values.upmdb.auth.username | quote }}
+      secret:
+        name: upmdb-app-secret
+      {{- if .Values.upmalert.enabled }}
+      postInitSQL:
+        - CREATE ROLE {{ .Values.upmalert.auth.username }} LOGIN PASSWORD {{ .Values.upmalert.auth.password | squote }};
+        - CREATE DATABASE {{ .Values.upmalert.database }} OWNER {{ .Values.upmalert.auth.username }};
+      {{- end }}
+      postInitApplicationSQL:
+        - CREATE EXTENSION IF NOT EXISTS postgis;
+        - CREATE EXTENSION IF NOT EXISTS postgis_topology;
+  {{- if .Values.upmalert.enabled }}
+  managed:
+    roles:
+      - name: {{ .Values.upmalert.auth.username | quote }}
+        ensure: present
+        login: true
+        passwordSecret:
+          name: upmalert-app-secret
+  {{- end }}
