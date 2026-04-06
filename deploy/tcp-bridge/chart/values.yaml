@@ -45,6 +45,34 @@ podSecurityContext:
   runAsGroup: 1000
   fsGroup: 1000
 
+initContainer:
+  enabled: true
+  name: setup-routing
+  image:
+    repository: ""
+    tag: ""
+    pullPolicy: ""
+  securityContext:
+    runAsUser: 0
+    runAsNonRoot: false
+    capabilities:
+      add:
+        - NET_ADMIN
+    allowPrivilegeEscalation: true
+  command:
+    - /bin/sh
+    - -c
+    - |
+      ETH0_IP=$(ip addr show eth0 | grep 'inet ' | awk '{print $2}' | cut -d/ -f1)
+      ETH0_GW=$(ip route show default dev eth0 | awk '/default/ {print $3; exit}')
+      if [ -z "$ETH0_IP" ] || [ -z "$ETH0_GW" ]; then
+        echo "failed to detect eth0 ip or gateway"
+        exit 1
+      fi
+      ip rule add from $ETH0_IP lookup 100
+      ip route add default via $ETH0_GW dev eth0 table 100
+      echo "policy routing set: from $ETH0_IP via eth0 gw $ETH0_GW (table 100)"
+
 securityContext:
   capabilities:
     drop:

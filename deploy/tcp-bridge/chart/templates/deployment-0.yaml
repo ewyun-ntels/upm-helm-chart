@@ -41,24 +41,16 @@ spec:
       serviceAccountName: {{ include "tcp-bridge.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.initContainer.enabled }}
       initContainers:
-      - name: setup-routing
-        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-        imagePullPolicy: {{ .Values.image.pullPolicy }}
+      - name: {{ .Values.initContainer.name }}
+        image: "{{ .Values.initContainer.image.repository | default .Values.image.repository }}:{{ .Values.initContainer.image.tag | default (.Values.image.tag | default .Chart.AppVersion) }}"
+        imagePullPolicy: {{ .Values.initContainer.image.pullPolicy | default .Values.image.pullPolicy }}
         securityContext:
-          runAsUser: 0
-          runAsNonRoot: false
-          capabilities:
-            add: ["NET_ADMIN"]
-          allowPrivilegeEscalation: true
+          {{- toYaml .Values.initContainer.securityContext | nindent 10 }}
         command:
-        - /bin/sh
-        - -c
-        - |
-          ETH0_IP=$(ip addr show eth0 | grep 'inet ' | awk '{print $2}' | cut -d/ -f1)
-          ip rule add from $ETH0_IP lookup 100
-          ip route add default via 169.254.1.1 dev eth0 table 100
-          echo "policy routing set: from $ETH0_IP via eth0 (table 100)"
+          {{- toYaml .Values.initContainer.command | nindent 10 }}
+      {{- end }}
       containers:
       - name: {{ .Chart.Name }}
         securityContext:
