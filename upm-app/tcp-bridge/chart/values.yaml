@@ -188,7 +188,7 @@ config:
 
   logging:
     level: "debug"
-    format: "text"
+    format: "json"
 
   alerta:
     enabled: true
