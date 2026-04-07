@@ -129,11 +129,11 @@ config:
 
   tcp:
     endpoints:
-      - host: "192.168.15.201"
-        port: 7000
+      - host: "192.168.10.112"
+        port: 10506
         priority: 0
-      - host: "192.168.15.201"
-        port: 8000
+      - host: "192.168.15.142"
+        port: 10506
         priority: 1
     
     connect_timeout: "2s"
@@ -143,9 +143,9 @@ config:
     frame_header_size: 8
     handshake_timeout: "10s"
     ping_timeout: "5s"
-    ping_interval_margin: "0s"
+    ping_interval_margin: "5s"
 
-    sys_prefix_id: "tcp-bridge"
+    sys_prefix_id: "upmc"
     branch_name: "SS"
 
   nats:
@@ -192,7 +192,7 @@ config:
 
   alerta:
     enabled: true
-    url: "http://upm-alarm-alerta.upm-alarm.svc.cluster.local:8080/api/alert"
+    url: "http://alerta.upm-ems.svc.cluster.local:8080/api/alert"
     timeout: "3s"
     environment: "RealTimeAlert"
     alerts:
