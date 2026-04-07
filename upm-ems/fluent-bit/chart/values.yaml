@@ -210,13 +210,13 @@ readinessProbe:
     path: /api/v1/health
     port: http
 
-resources: {}
-#   limits:
-#     cpu: 100m
-#     memory: 128Mi
-#   requests:
-#     cpu: 100m
-#     memory: 128Mi
+resources:
+  requests:
+    cpu: 200m
+    memory: 512Mi
+  limits:
+    cpu: 500m
+    memory: 1Gi
 
 ## only available if kind is Deployment
 ingress:
@@ -401,7 +401,7 @@ config:
         Path /var/log/containers/*.log
         multiline.parser docker, cri
         Tag kube.*
-        Mem_Buf_Limit 5MB
+        Mem_Buf_Limit 512MB
         Skip_Long_Lines On
 
     [INPUT]

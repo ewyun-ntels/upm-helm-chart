@@ -8,6 +8,10 @@ spec:
   imageName: {{ .Values.upmdb.imageName | quote }}
   primaryUpdateMethod: switchover
   primaryUpdateStrategy: unsupervised
+  postgresql:
+    parameters:
+      timezone: "Asia/Seoul"
+      log_timezone: "Asia/Seoul"
   affinity:
     nodeSelector:
       node-group.ntels.io/type: upm-app
