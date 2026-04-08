@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: tcp-bridge
+  namespace: upm-app
+  labels:
+    app.kubernetes.io/name: tcp-bridge
+    app.kubernetes.io/instance: tcp-bridge
+    release: kube-prometheus-stack   # Prometheus ServiceMonitorSelector 조건
+spec:
+  selector:
+    matchLabels:
+      app: tcp-bridge
+      app.kubernetes.io/name: tcp-bridge
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 10s

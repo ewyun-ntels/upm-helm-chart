@@ -102,7 +102,7 @@ config:
 # Extra environment variables to append to this nodeGroup
 # This will be appended to the current 'env:' key. You can use any of the kubernetes env
 # syntax here
-extraEnvs: []
+#extraEnvs: [] <- ewyun: uncommented and set the initial admin password required by OpenSearch security demo config
 #  - name: MY_ENVIRONMENT_VAR
 #    value: the_value_goes_here
 # Chart version 2.18.0 and App Version OpenSearch 2.12.0 onwards a custom strong password needs to be provided in order to setup demo admin user.
@@ -454,6 +454,7 @@ masterTerminationFix: false
 opensearchLifecycle:
   # edited by ewyun: register a 7-day ISM retention policy for application, message, and node log indices
   # edited by ewyun: apply the same retention policy to app-*, msg-*, and node-* index patterns
+  # edited by ewyun: setup rolling-* index with daily rollover and 7-day retention
   postStart:
     exec:
       command:
@@ -468,6 +469,7 @@ opensearchLifecycle:
             sleep 5
           done
 
+          # Create logs retention policy
           curl -sk -u "${AUTH}" -X PUT "${ES_URL}/_plugins/_ism/policies/logs-retention-7d" \
             -H 'Content-Type: application/json' \
             -d '{
@@ -504,6 +506,87 @@ opensearchLifecycle:
                       "msg-*",
                       "node-*"
                     ],
+                    "priority": 100
+                  }
+                ]
+              }
+            }'
+
+          # Create index template for rolling-* indices
+          curl -sk -u "${AUTH}" -X PUT "${ES_URL}/_index_template/rolling-template" \
+            -H 'Content-Type: application/json' \
+            -d '{
+              "index_patterns": ["rolling-*"],
+              "template": {
+                "settings": {
+                  "number_of_shards": 1,
+                  "number_of_replicas": 1,
+                  "plugins.index_state_management.rollover_alias": "rolling-write"
+                }
+              }
+            }'
+
+          # Create initial rolling index with write and read aliases
+          INIT_INDEX="rolling-$(date +%Y.%m.%d)-000001"
+          curl -sk -u "${AUTH}" -X PUT "${ES_URL}/${INIT_INDEX}" \
+            -H 'Content-Type: application/json' \
+            -d '{
+              "aliases": {
+                "rolling-write": {
+                  "is_write_index": true
+                },
+                "rolling-last-7d": {}
+              }
+            }' || true
+
+          # Create ISM policy for rolling indices with daily rollover and 7-day retention
+          curl -sk -u "${AUTH}" -X PUT "${ES_URL}/_plugins/_ism/policies/rolling-daily-rollover" \
+            -H 'Content-Type: application/json' \
+            -d '{
+              "policy": {
+                "description": "Daily rollover and 7-day retention for rolling indices",
+                "default_state": "active",
+                "states": [
+                  {
+                    "name": "active",
+                    "actions": [
+                      {
+                        "rollover": {
+                          "min_index_age": "1d"
+                        }
+                      }
+                    ],
+                    "transitions": [
+                      {
+                        "state_name": "delete",
+                        "conditions": {
+                          "min_index_age": "7d"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "name": "delete",
+                    "actions": [
+                      {
+                        "alias": {
+                          "remove": [
+                            {
+                              "alias": "rolling-last-7d"
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "delete": {}
+                      }
+                    ],
+                    "transitions": []
+                  }
+                ],
+                "ism_template": [
+                  {
+                    "index_patterns": ["rolling-*"],
                     "priority": 100
                   }
                 ]

@@ -1,0 +1,648 @@
+{
+  "title": "TCP Bridge",
+  "uid": "tcp-bridge-overview",
+  "tags": ["tcp-bridge"],
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "timezone": "browser",
+  "graphTooltip": 1,
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "hide": 0
+      },
+      {
+        "name": "job",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "query": { "query": "label_values(tcp_bridge_connection_state, job)", "refId": "A" },
+        "refresh": 2,
+        "hide": 0
+      },
+      {
+        "name": "pod",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "query": { "query": "label_values(tcp_bridge_connection_state{job=\"$job\"}, pod)", "refId": "A" },
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "hide": 0
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Connection",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 },
+      "collapsed": false
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Connection State",
+      "description": "2=Ready, 1=Connecting, 0=Disconnected",
+      "gridPos": { "x": 0, "y": 1, "w": 8, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "expr": "tcp_bridge_connection_state{job=\"$job\", pod=~\"$pod\"}",
+          "legendFormat": "{{pod}} / {{connection_id}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "auto",
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "Disconnected", "color": "red" }, "1": { "text": "Connecting", "color": "yellow" }, "2": { "text": "Ready", "color": "green" } } }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [] }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Active Connection",
+      "description": "현재 primary로 선택된 connection",
+      "gridPos": { "x": 8, "y": 1, "w": 8, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "expr": "tcp_bridge_selected_connection{job=\"$job\", pod=~\"$pod\"} == 1",
+          "legendFormat": "{{pod}} / {{connection_id}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "green", "mode": "fixed" },
+          "mappings": [ { "type": "value", "options": { "1": { "text": "Selected" } } } ]
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Failover 발생",
+      "gridPos": { "x": 16, "y": 1, "w": 8, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "expr": "increase(tcp_bridge_failover_total{job=\"$job\", pod=~\"$pod\"}[$__range])",
+          "legendFormat": "{{pod}} {{reason}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 3 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Connection 이벤트",
+      "gridPos": { "x": 0, "y": 5, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "expr": "rate(tcp_bridge_connection_attempts_total{job=\"$job\", pod=~\"$pod\"}[$__rate_interval])",
+          "legendFormat": "{{pod}} attempts",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(tcp_bridge_connection_success_total{job=\"$job\", pod=~\"$pod\"}[$__rate_interval])",
+          "legendFormat": "{{pod}} success",
+          "refId": "B"
+        },
+        {
+          "expr": "rate(tcp_bridge_connection_failures_total{job=\"$job\", pod=~\"$pod\"}[$__rate_interval])",
+          "legendFormat": "{{pod}} / {{reason}} failure",
+          "refId": "C"
+        },
+        {
+          "expr": "rate(tcp_bridge_disconnects_total{job=\"$job\", pod=~\"$pod\"}[$__rate_interval])",
+          "legendFormat": "{{pod}} / {{reason}} disconnect",
+          "refId": "D"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "ops" }
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Ping RTT",
+      "gridPos": { "x": 12, "y": 5, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, rate(tcp_bridge_ping_rtt_seconds_bucket{job=\"$job\", pod=~\"$pod\"}[$__rate_interval]))",
+          "legendFormat": "{{pod}} p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, rate(tcp_bridge_ping_rtt_seconds_bucket{job=\"$job\", pod=~\"$pod\"}[$__rate_interval]))",
+          "legendFormat": "{{pod}} p95",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, rate(tcp_bridge_ping_rtt_seconds_bucket{job=\"$job\", pod=~\"$pod\"}[$__rate_interval]))",
+          "legendFormat": "{{pod}} p99",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "s" }
+      }
+    },
+    {
+      "id": 10,
+      "type": "row",
+      "title": "Inbound (TCP → NATS)",
+      "gridPos": { "x": 0, "y": 13, "w": 24, "h": 1 },
+      "collapsed": false
+    },
+    {
+      "id": 11,
+      "type": "stat",
+      "title": "Inbound 에러 건수 (2m)",
+      "gridPos": { "x": 0, "y": 14, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "expr": "tcp_bridge:inbound_error_count:2m{pod=~\"$pod\"}",
+          "legendFormat": "{{pod}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "orange", "value": 3 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 12,
+      "type": "stat",
+      "title": "Inbound Inflight",
+      "gridPos": { "x": 6, "y": 14, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "expr": "sum by (pod) (tcp_bridge_inbound_inflight_requests{job=\"$job\", pod=~\"$pod\"})",
+          "legendFormat": "{{pod}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "fieldConfig": {
+        "defaults": { "unit": "short" }
+      }
+    },
+    {
+      "id": 13,
+      "type": "stat",
+      "title": "Inbound Timeout",
+      "gridPos": { "x": 12, "y": 14, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "expr": "increase(tcp_bridge_inbound_timeout_total{job=\"$job\", pod=~\"$pod\"}[$__range])",
+          "legendFormat": "{{pod}} / {{stage}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 14,
+      "type": "stat",
+      "title": "Inbound Unmatched Response",
+      "gridPos": { "x": 18, "y": 14, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "expr": "increase(tcp_bridge_inbound_unmatched_response_total{job=\"$job\", pod=~\"$pod\"}[$__range])",
+          "legendFormat": "{{pod}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "Inbound 요청 / 응답 rate",
+      "gridPos": { "x": 0, "y": 18, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "expr": "sum by (pod, msg_type) (rate(tcp_bridge_inbound_requests_total{job=\"$job\", pod=~\"$pod\"}[$__rate_interval]))",
+          "legendFormat": "{{pod}} / {{msg_type}} req",
+          "refId": "A"
+        },
+        {
+          "expr": "sum by (pod, msg_type, status) (rate(tcp_bridge_inbound_responses_total{job=\"$job\", pod=~\"$pod\"}[$__rate_interval]))",
+          "legendFormat": "{{pod}} / {{msg_type}} / {{status}}",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "ops" }
+      }
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "Inbound E2E Duration",
+      "gridPos": { "x": 12, "y": 18, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum by (pod, le) (rate(tcp_bridge_inbound_end_to_end_duration_seconds_bucket{job=\"$job\", pod=~\"$pod\"}[$__rate_interval])))",
+          "legendFormat": "{{pod}} p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (pod, le) (rate(tcp_bridge_inbound_end_to_end_duration_seconds_bucket{job=\"$job\", pod=~\"$pod\"}[$__rate_interval])))",
+          "legendFormat": "{{pod}} p95",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum by (pod, le) (rate(tcp_bridge_inbound_end_to_end_duration_seconds_bucket{job=\"$job\", pod=~\"$pod\"}[$__rate_interval])))",
+          "legendFormat": "{{pod}} p99",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "s" }
+      }
+    },
+    {
+      "id": 20,
+      "type": "row",
+      "title": "Outbound (NATS → TCP)",
+      "gridPos": { "x": 0, "y": 26, "w": 24, "h": 1 },
+      "collapsed": false
+    },
+    {
+      "id": 21,
+      "type": "stat",
+      "title": "Outbound 에러 건수 (2m)",
+      "gridPos": { "x": 0, "y": 27, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "expr": "tcp_bridge:outbound_error_count:2m{pod=~\"$pod\"}",
+          "legendFormat": "{{pod}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "orange", "value": 3 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 22,
+      "type": "stat",
+      "title": "Outbound Inflight",
+      "gridPos": { "x": 6, "y": 27, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "expr": "sum by (pod) (tcp_bridge_outbound_inflight_requests{job=\"$job\", pod=~\"$pod\"})",
+          "legendFormat": "{{pod}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "fieldConfig": {
+        "defaults": { "unit": "short" }
+      }
+    },
+    {
+      "id": 23,
+      "type": "stat",
+      "title": "Outbound Timeout",
+      "gridPos": { "x": 12, "y": 27, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "expr": "increase(tcp_bridge_outbound_timeout_total{job=\"$job\", pod=~\"$pod\"}[$__range])",
+          "legendFormat": "{{pod}} / {{stage}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 24,
+      "type": "stat",
+      "title": "Outbound Unmatched Response",
+      "gridPos": { "x": 18, "y": 27, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "expr": "increase(tcp_bridge_outbound_unmatched_response_total{job=\"$job\", pod=~\"$pod\"}[$__range])",
+          "legendFormat": "{{pod}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 25,
+      "type": "timeseries",
+      "title": "Outbound 요청 / 응답 rate",
+      "gridPos": { "x": 0, "y": 31, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "expr": "sum by (pod, msg_type) (rate(tcp_bridge_outbound_requests_total{job=\"$job\", pod=~\"$pod\"}[$__rate_interval]))",
+          "legendFormat": "{{pod}} / {{msg_type}} req",
+          "refId": "A"
+        },
+        {
+          "expr": "sum by (pod, msg_type, status) (rate(tcp_bridge_outbound_responses_total{job=\"$job\", pod=~\"$pod\"}[$__rate_interval]))",
+          "legendFormat": "{{pod}} / {{msg_type}} / {{status}}",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "ops" }
+      }
+    },
+    {
+      "id": 26,
+      "type": "timeseries",
+      "title": "Outbound E2E Duration",
+      "gridPos": { "x": 12, "y": 31, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum by (pod, le) (rate(tcp_bridge_outbound_end_to_end_duration_seconds_bucket{job=\"$job\", pod=~\"$pod\"}[$__rate_interval])))",
+          "legendFormat": "{{pod}} p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (pod, le) (rate(tcp_bridge_outbound_end_to_end_duration_seconds_bucket{job=\"$job\", pod=~\"$pod\"}[$__rate_interval])))",
+          "legendFormat": "{{pod}} p95",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum by (pod, le) (rate(tcp_bridge_outbound_end_to_end_duration_seconds_bucket{job=\"$job\", pod=~\"$pod\"}[$__rate_interval])))",
+          "legendFormat": "{{pod}} p99",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "s" }
+      }
+    },
+    {
+      "id": 30,
+      "type": "row",
+      "title": "Queue & TCP",
+      "gridPos": { "x": 0, "y": 39, "w": 24, "h": 1 },
+      "collapsed": false
+    },
+    {
+      "id": 31,
+      "type": "gauge",
+      "title": "Send Queue 사용률",
+      "gridPos": { "x": 0, "y": 40, "w": 6, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "expr": "tcp_bridge_send_queue_utilization_percent{job=\"$job\", pod=~\"$pod\"}",
+          "legendFormat": "{{pod}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 50 },
+              { "color": "red", "value": 80 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 32,
+      "type": "timeseries",
+      "title": "Send Queue Size",
+      "gridPos": { "x": 6, "y": 40, "w": 6, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "expr": "tcp_bridge_send_queue_size{job=\"$job\", pod=~\"$pod\"}",
+          "legendFormat": "{{pod}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short" }
+      }
+    },
+    {
+      "id": 33,
+      "type": "timeseries",
+      "title": "TCP Frames 송수신",
+      "gridPos": { "x": 12, "y": 40, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "expr": "sum by (pod, frame_type) (rate(tcp_bridge_tcp_frames_sent_total{job=\"$job\", pod=~\"$pod\"}[$__rate_interval]))",
+          "legendFormat": "{{pod}} / {{frame_type}} sent",
+          "refId": "A"
+        },
+        {
+          "expr": "sum by (pod, frame_type) (rate(tcp_bridge_tcp_frames_received_total{job=\"$job\", pod=~\"$pod\"}[$__rate_interval]))",
+          "legendFormat": "{{pod}} / {{frame_type}} recv",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "ops" }
+      }
+    },
+    {
+      "id": 34,
+      "type": "timeseries",
+      "title": "TCP Bytes 송수신",
+      "gridPos": { "x": 0, "y": 48, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "expr": "sum by (pod, direction) (rate(tcp_bridge_tcp_bytes_transmitted_total{job=\"$job\", pod=~\"$pod\"}[$__rate_interval]))",
+          "legendFormat": "{{pod}} / {{direction}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "Bps" }
+      }
+    },
+    {
+      "id": 35,
+      "type": "timeseries",
+      "title": "Send Queue Drop",
+      "gridPos": { "x": 12, "y": 48, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "expr": "rate(tcp_bridge_send_queue_drop_total{job=\"$job\", pod=~\"$pod\"}[$__rate_interval])",
+          "legendFormat": "{{pod}} drop",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(tcp_bridge_send_queue_enqueue_total{job=\"$job\", pod=~\"$pod\"}[$__rate_interval])",
+          "legendFormat": "{{pod}} enqueue",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "ops" }
+      }
+    }
+  ]
+}

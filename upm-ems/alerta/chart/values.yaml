@@ -81,6 +81,9 @@ env:
   ALLOWED_ENVIRONMENTS: "Production,Development,RealTimeAlert,MetricAlert"
   # Used by webhook integrations when the incoming payload has no environment label.
   DEFAULT_ENVIRONMENT: "RealTimeAlert"
+  # Keep housekeeping enabled but prevent it from deleting alerts from the database.
+  DELETE_EXPIRED_AFTER: "0"
+  DELETE_INFO_AFTER: "0"
 
 # Existing secret name to import as envFrom (optional)
 envFromSecretName: ""
