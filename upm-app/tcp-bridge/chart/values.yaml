@@ -145,7 +145,7 @@ config:
     ping_timeout: "5s"
     ping_interval_margin: "5s"
 
-    sys_prefix_id: "upmc"
+    sys_prefix_id: "upmc-"
     branch_name: "SS"
 
   nats:

@@ -1,9 +1,9 @@
 {
-  "title": "TCP Bridge",
+  "title": "TCP Bridge Monitoring",
   "uid": "tcp-bridge-overview",
-  "tags": ["tcp-bridge"],
+  "tags": ["tcp-bridge", "connectivity", "traffic-quality"],
   "schemaVersion": 38,
-  "version": 2,
+  "version": 3,
   "refresh": "30s",
   "time": { "from": "now-1h", "to": "now" },
   "timezone": "browser",
@@ -40,6 +40,17 @@
         "allValue": ".*",
         "multi": true,
         "hide": 0
+      },
+      {
+        "name": "sys_id",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "query": { "query": "label_values(tcp_bridge:inbound_communication_rate:2m, sys_id)", "refId": "A" },
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "hide": 0
       }
     ]
   },
@@ -47,7 +58,7 @@
     {
       "id": 1,
       "type": "row",
-      "title": "Connection Status",
+      "title": "🔌 Connection Status",
       "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 },
       "collapsed": false
     },
@@ -56,7 +67,7 @@
       "type": "stat",
       "title": "Connection State",
       "description": "2=Ready, 1=Connecting, 0=Disconnected",
-      "gridPos": { "x": 0, "y": 1, "w": 8, "h": 4 },
+      "gridPos": { "x": 0, "y": 1, "w": 12, "h": 4 },
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
         {
@@ -69,23 +80,24 @@
         "reduceOptions": { "calcs": ["lastNotNull"] },
         "orientation": "auto",
         "colorMode": "background",
-        "graphMode": "none"
+        "graphMode": "none",
+        "textMode": "value_and_name"
       },
       "fieldConfig": {
         "defaults": {
           "mappings": [
             { "type": "value", "options": { "0": { "text": "Disconnected", "color": "red" }, "1": { "text": "Connecting", "color": "yellow" }, "2": { "text": "Ready", "color": "green" } } }
           ],
-          "thresholds": { "mode": "absolute", "steps": [] }
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "transparent", "value": null }] }
         }
       }
     },
     {
       "id": 3,
       "type": "stat",
-      "title": "Active Connection",
-      "description": "현재 primary/master로 선택된 connection (1=selected, 0=not selected)",
-      "gridPos": { "x": 8, "y": 1, "w": 8, "h": 4 },
+      "title": "Active Primary Connection",
+      "description": "현재 선택된 primary connection (outbound 전송 사용)",
+      "gridPos": { "x": 12, "y": 1, "w": 12, "h": 4 },
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
         {
@@ -97,67 +109,152 @@
       "options": {
         "reduceOptions": { "calcs": ["lastNotNull"] },
         "colorMode": "background",
-        "graphMode": "none"
+        "graphMode": "none",
+        "textMode": "name"
       },
       "fieldConfig": {
         "defaults": {
           "color": { "fixedColor": "green", "mode": "fixed" },
-          "mappings": [ { "type": "value", "options": { "1": { "text": "Selected" } } } ]
+          "mappings": [ { "type": "value", "options": { "1": { "text": "Active" } } } ]
         }
       }
     },
     {
       "id": 4,
-      "type": "stat",
-      "title": "Failover 발생",
-      "description": "선택된 connection 변경 총 횟수 (reason: selected, failover, higher_priority_restored, connection_lost, active_changed). 짧은 시간 반복 증가 시 active 회선 flap 가능성 확인 필요",
-      "gridPos": { "x": 16, "y": 1, "w": 8, "h": 4 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "targets": [
-        {
-          "expr": "increase(tcp_bridge_failover_total{job=\"$job\", pod=~\"$pod\"}[$__range])",
-          "legendFormat": "{{pod}} {{reason}}",
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
-        "colorMode": "background",
-        "graphMode": "none"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1 },
-              { "color": "red", "value": 3 }
-            ]
-          }
-        }
-      }
-    },
-    {
-      "id": 5,
       "type": "timeseries",
       "title": "Connection State Over Time",
-      "description": "각 TCP 연결의 상태 변화 추이 (0=disconnected, 1=connecting, 2=ready). selected_connection과 함께 보면 primary/standby 회선 구분 가능",
-      "gridPos": { "x": 0, "y": 5, "w": 12, "h": 8 },
+      "description": "연결 상태 추이 (0=disconnected, 1=connecting, 2=ready)",
+      "gridPos": { "x": 0, "y": 5, "w": 24, "h": 6 },
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
         {
           "expr": "tcp_bridge_connection_state{job=\"$job\", pod=~\"$pod\"}",
-          "legendFormat": "{{pod}} / {{connection_id}} ({{exported_endpoint}})",
+          "legendFormat": "{{pod}} / {{connection_id}}",
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": { 
           "unit": "short",
+          "min": 0,
+          "max": 2,
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
+            "fillOpacity": 10,
+            "lineInterpolation": "stepAfter"
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        }
+      }
+    },
+    {
+      "id": 10,
+      "type": "row",
+      "title": "📥 Inbound Traffic Quality",
+      "gridPos": { "x": 0, "y": 11, "w": 24, "h": 1 },
+      "collapsed": false
+    },
+    {
+      "id": 11,
+      "type": "gauge",
+      "title": "Inbound Communication Rate (소통률)",
+      "description": "Request 대비 Response 비율. 95% 이상이 정상. 낮으면 NATS 또는 downstream 서비스 문제 가능성.",
+      "gridPos": { "x": 0, "y": 12, "w": 6, "h": 6 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "expr": "tcp_bridge:inbound_communication_rate:2m{sys_id=~\"$sys_id\"}",
+          "legendFormat": "{{sys_id}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 0.90 },
+              { "color": "green", "value": 0.95 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true
+      }
+    },
+    {
+      "id": 12,
+      "type": "gauge",
+      "title": "Inbound Error Rate (에러율)",
+      "description": "전체 응답 대비 error/timeout/dropped 비율. 1% 미만이 정상.",
+      "gridPos": { "x": 6, "y": 12, "w": 6, "h": 6 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "expr": "tcp_bridge:inbound_error_rate:2m{sys_id=~\"$sys_id\"}",
+          "legendFormat": "{{sys_id}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 0.10,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.01 },
+              { "color": "orange", "value": 0.03 },
+              { "color": "red", "value": 0.05 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true
+      }
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Inbound Request/Response Rate",
+      "description": "초당 처리량 (requests: TCP 수신, responses: NATS 처리 완료)",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 6 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "expr": "sum by (sys_id) (rate(tcp_bridge_inbound_requests_total{job=\"$job\", pod=~\"$pod\"}[$__rate_interval]))",
+          "legendFormat": "{{sys_id}} requests",
+          "refId": "A"
+        },
+        {
+          "expr": "sum by (sys_id, status) (rate(tcp_bridge_inbound_responses_total{job=\"$job\", pod=~\"$pod\"}[$__rate_interval]))",
+          "legendFormat": "{{sys_id}} responses/{{status}}",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { 
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
             "fillOpacity": 10
           }
         }
@@ -165,147 +262,418 @@
       "options": {
         "legend": {
           "displayMode": "table",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": ["mean", "lastNotNull"]
         }
       }
     },
     {
-      "id": 6,
+      "id": 14,
       "type": "timeseries",
-      "title": "Ping RTT",
-      "description": "keep-alive PING 전송 후 PONG 응답까지의 round-trip time (p50/p95/p99)",
-      "gridPos": { "x": 12, "y": 5, "w": 12, "h": 8 },
+      "title": "Inbound Communication Rate Trend",
+      "description": "소통률 추이 (>= 0.95 정상)",
+      "gridPos": { "x": 0, "y": 18, "w": 12, "h": 6 },
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, rate(tcp_bridge_ping_rtt_seconds_bucket{job=\"$job\", pod=~\"$pod\"}[$__rate_interval]))",
-          "legendFormat": "{{pod}} / {{connection_id}} p50",
+          "expr": "tcp_bridge:inbound_communication_rate:2m{sys_id=~\"$sys_id\"}",
+          "legendFormat": "{{sys_id}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { 
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 20
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byRegexp", "options": ".*" },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "transparent", "value": null },
+                    { "color": "red", "value": 0 },
+                    { "color": "green", "value": 0.95 }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        }
+      }
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "Inbound Error Rate Trend",
+      "description": "에러율 추이 (< 0.01 정상)",
+      "gridPos": { "x": 12, "y": 18, "w": 12, "h": 6 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "expr": "tcp_bridge:inbound_error_rate:2m{sys_id=~\"$sys_id\"}",
+          "legendFormat": "{{sys_id}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { 
+          "unit": "percentunit",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 20
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byRegexp", "options": ".*" },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "transparent", "value": null },
+                    { "color": "green", "value": 0 },
+                    { "color": "yellow", "value": 0.01 },
+                    { "color": "orange", "value": 0.03 },
+                    { "color": "red", "value": 0.05 }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        }
+      }
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "Inbound End-to-End Duration (p50/p95/p99)",
+      "description": "TCP 요청 수신부터 TCP 응답 전송 완료까지의 전체 처리 시간 (histogram 기반)\n\n• p50 (median): 전체 요청의 50%가 이 시간 이하로 처리됨 (일반적인 응답 시간)\n• p95: 전체 요청의 95%가 이 시간 이하 (대부분 사용자 경험)\n• p99: 전체 요청의 99%가 이 시간 이하 (최악의 경우 감지)\n\n⚠️ 주의: histogram bucket 기반 근사치입니다. p95/p99가 급증하면 일부 요청이 매우 느려진 것이며, NATS 또는 downstream 서비스 응답 시간을 확인하세요.",
+      "gridPos": { "x": 0, "y": 24, "w": 24, "h": 6 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum by (sys_id, le) (rate(tcp_bridge_inbound_end_to_end_duration_seconds_bucket{job=\"$job\", pod=~\"$pod\", status=\"success\"}[$__rate_interval])))",
+          "legendFormat": "{{sys_id}} p50",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, rate(tcp_bridge_ping_rtt_seconds_bucket{job=\"$job\", pod=~\"$pod\"}[$__rate_interval]))",
-          "legendFormat": "{{pod}} / {{connection_id}} p95",
+          "expr": "histogram_quantile(0.95, sum by (sys_id, le) (rate(tcp_bridge_inbound_end_to_end_duration_seconds_bucket{job=\"$job\", pod=~\"$pod\", status=\"success\"}[$__rate_interval])))",
+          "legendFormat": "{{sys_id}} p95",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.99, rate(tcp_bridge_ping_rtt_seconds_bucket{job=\"$job\", pod=~\"$pod\"}[$__rate_interval]))",
-          "legendFormat": "{{pod}} / {{connection_id}} p99",
+          "expr": "histogram_quantile(0.99, sum by (sys_id, le) (rate(tcp_bridge_inbound_end_to_end_duration_seconds_bucket{job=\"$job\", pod=~\"$pod\", status=\"success\"}[$__rate_interval])))",
+          "legendFormat": "{{sys_id}} p99",
           "refId": "C"
         }
       ],
       "fieldConfig": {
-        "defaults": { "unit": "s" }
-      }
-    },
-    {
-      "id": 7,
-      "type": "timeseries",
-      "title": "Connection Events Rate",
-      "description": "연결 이벤트 발생률 - attempts: dial 시도, success: READY 진입, failures: 연결/handshake 실패, disconnects: 연결 끊김. attempts-success 차이가 계속 커지면 연결 불안정",
-      "gridPos": { "x": 0, "y": 13, "w": 24, "h": 8 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "targets": [
-        {
-          "expr": "rate(tcp_bridge_connection_attempts_total{job=\"$job\", pod=~\"$pod\"}[$__rate_interval])",
-          "legendFormat": "{{pod}} / {{connection_id}} attempts",
-          "refId": "A"
-        },
-        {
-          "expr": "rate(tcp_bridge_connection_success_total{job=\"$job\", pod=~\"$pod\"}[$__rate_interval])",
-          "legendFormat": "{{pod}} / {{connection_id}} success",
-          "refId": "B"
-        },
-        {
-          "expr": "rate(tcp_bridge_connection_failures_total{job=\"$job\", pod=~\"$pod\"}[$__rate_interval])",
-          "legendFormat": "{{pod}} / {{connection_id}} / {{reason}} failure",
-          "refId": "C"
-        },
-        {
-          "expr": "rate(tcp_bridge_disconnects_total{job=\"$job\", pod=~\"$pod\"}[$__rate_interval])",
-          "legendFormat": "{{pod}} / {{connection_id}} / {{reason}} disconnect",
-          "refId": "D"
+        "defaults": { 
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1
+          }
         }
-      ],
-      "fieldConfig": {
-        "defaults": { "unit": "ops" }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": ["mean", "max"]
+        }
       }
     },
     {
-      "id": 10,
+      "id": 20,
       "type": "row",
-      "title": "Send Queue",
-      "gridPos": { "x": 0, "y": 21, "w": 24, "h": 1 },
+      "title": "📤 Outbound Traffic Quality",
+      "gridPos": { "x": 0, "y": 30, "w": 24, "h": 1 },
       "collapsed": false
     },
     {
-      "id": 11,
+      "id": 21,
       "type": "gauge",
-      "title": "Send Queue Utilization",
-      "description": "송신 큐 사용률 (%). 80% 이상 시 큐 크기 조정 검토 필요",
-      "gridPos": { "x": 0, "y": 22, "w": 6, "h": 8 },
+      "title": "Outbound Communication Rate (소통률)",
+      "description": "Request 대비 Response 비율. 95% 이상이 정상. 낮으면 TCP peer 연결 또는 응답 지연 문제 가능성.",
+      "gridPos": { "x": 0, "y": 31, "w": 6, "h": 6 },
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
         {
-          "expr": "tcp_bridge_send_queue_utilization_percent{job=\"$job\", pod=~\"$pod\"}",
-          "legendFormat": "{{pod}}",
+          "expr": "tcp_bridge:outbound_communication_rate:2m{sys_id=~\"$sys_id\"}",
+          "legendFormat": "{{sys_id}}",
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "percent",
+          "unit": "percentunit",
           "min": 0,
-          "max": 100,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 0.90 },
+              { "color": "green", "value": 0.95 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true
+      }
+    },
+    {
+      "id": 22,
+      "type": "gauge",
+      "title": "Outbound Error Rate (에러율)",
+      "description": "전체 응답 대비 error/timeout/dropped 비율. 1% 미만이 정상.",
+      "gridPos": { "x": 6, "y": 31, "w": 6, "h": 6 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "expr": "tcp_bridge:outbound_error_rate:2m{sys_id=~\"$sys_id\"}",
+          "legendFormat": "{{sys_id}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 0.10,
           "thresholds": {
             "mode": "absolute",
             "steps": [
               { "color": "green", "value": null },
-              { "color": "yellow", "value": 50 },
-              { "color": "red", "value": 80 }
+              { "color": "yellow", "value": 0.01 },
+              { "color": "orange", "value": 0.03 },
+              { "color": "red", "value": 0.05 }
             ]
           }
         }
+      },
+      "options": {
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true
       }
     },
     {
-      "id": 12,
+      "id": 23,
       "type": "timeseries",
-      "title": "Send Queue Size",
-      "description": "현재 송신 큐에 대기 중인 메시지 수",
-      "gridPos": { "x": 6, "y": 22, "w": 9, "h": 8 },
+      "title": "Outbound Request/Response Rate",
+      "description": "초당 처리량 (requests: NATS 수신, responses: TCP 처리 완료)",
+      "gridPos": { "x": 12, "y": 31, "w": 12, "h": 6 },
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
         {
-          "expr": "tcp_bridge_send_queue_size{job=\"$job\", pod=~\"$pod\"}",
-          "legendFormat": "{{pod}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": { "unit": "short" }
-      }
-    },
-    {
-      "id": 13,
-      "type": "timeseries",
-      "title": "Send Queue Operations",
-      "description": "송신 큐 작업 처리율 - enqueue: 큐 추가, drop: 큐 포화로 인한 드롭. drop 발생 시 큐 크기 및 처리 성능 확인 필요",
-      "gridPos": { "x": 15, "y": 22, "w": 9, "h": 8 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "targets": [
-        {
-          "expr": "rate(tcp_bridge_send_queue_enqueue_total{job=\"$job\", pod=~\"$pod\"}[$__rate_interval])",
-          "legendFormat": "{{pod}} enqueue",
+          "expr": "sum by (sys_id) (rate(tcp_bridge_outbound_requests_total{job=\"$job\", pod=~\"$pod\"}[$__rate_interval]))",
+          "legendFormat": "{{sys_id}} requests",
           "refId": "A"
         },
         {
-          "expr": "rate(tcp_bridge_send_queue_drop_total{job=\"$job\", pod=~\"$pod\"}[$__rate_interval])",
-          "legendFormat": "{{pod}} drop",
+          "expr": "sum by (sys_id, status) (rate(tcp_bridge_outbound_responses_total{job=\"$job\", pod=~\"$pod\"}[$__rate_interval]))",
+          "legendFormat": "{{sys_id}} responses/{{status}}",
           "refId": "B"
         }
       ],
       "fieldConfig": {
-        "defaults": { "unit": "ops" }
+        "defaults": { 
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": ["mean", "lastNotNull"]
+        }
+      }
+    },
+    {
+      "id": 24,
+      "type": "timeseries",
+      "title": "Outbound Communication Rate Trend",
+      "description": "소통률 추이 (>= 0.95 정상)",
+      "gridPos": { "x": 0, "y": 37, "w": 12, "h": 6 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "expr": "tcp_bridge:outbound_communication_rate:2m{sys_id=~\"$sys_id\"}",
+          "legendFormat": "{{sys_id}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { 
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 20
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byRegexp", "options": ".*" },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "transparent", "value": null },
+                    { "color": "red", "value": 0 },
+                    { "color": "green", "value": 0.95 }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        }
+      }
+    },
+    {
+      "id": 25,
+      "type": "timeseries",
+      "title": "Outbound Error Rate Trend",
+      "description": "에러율 추이 (< 0.01 정상)",
+      "gridPos": { "x": 12, "y": 37, "w": 12, "h": 6 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "expr": "tcp_bridge:outbound_error_rate:2m{sys_id=~\"$sys_id\"}",
+          "legendFormat": "{{sys_id}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { 
+          "unit": "percentunit",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 20
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byRegexp", "options": ".*" },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "transparent", "value": null },
+                    { "color": "green", "value": 0 },
+                    { "color": "yellow", "value": 0.01 },
+                    { "color": "orange", "value": 0.03 },
+                    { "color": "red", "value": 0.05 }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        }
+      }
+    },
+    {
+      "id": 26,
+      "type": "timeseries",
+      "title": "Outbound End-to-End Duration (p50/p95/p99)",
+      "description": "NATS 요청 수신부터 NATS reply 발행까지의 전체 처리 시간 (histogram 기반)\n\n• p50 (median): 전체 요청의 50%가 이 시간 이하로 처리됨 (일반적인 응답 시간)\n• p95: 전체 요청의 95%가 이 시간 이하 (대부분 사용자 경험)\n• p99: 전체 요청의 99%가 이 시간 이하 (최악의 경우 감지)\n\n⚠️ 주의: histogram bucket 기반 근사치입니다. p95/p99가 급증하면 일부 요청이 매우 느려진 것이며, TCP peer 응답 지연 또는 retry/failover 발생 여부를 확인하세요.",
+      "gridPos": { "x": 0, "y": 43, "w": 24, "h": 6 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum by (sys_id, le) (rate(tcp_bridge_outbound_end_to_end_duration_seconds_bucket{job=\"$job\", pod=~\"$pod\", status=\"success\"}[$__rate_interval])))",
+          "legendFormat": "{{sys_id}} p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (sys_id, le) (rate(tcp_bridge_outbound_end_to_end_duration_seconds_bucket{job=\"$job\", pod=~\"$pod\", status=\"success\"}[$__rate_interval])))",
+          "legendFormat": "{{sys_id}} p95",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum by (sys_id, le) (rate(tcp_bridge_outbound_end_to_end_duration_seconds_bucket{job=\"$job\", pod=~\"$pod\", status=\"success\"}[$__rate_interval])))",
+          "legendFormat": "{{sys_id}} p99",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { 
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": ["mean", "max"]
+        }
       }
     }
   ]
