@@ -3,7 +3,7 @@
   "uid": "tcp-bridge-overview",
   "tags": ["tcp-bridge", "connectivity", "traffic-quality"],
   "schemaVersion": 38,
-  "version": 3,
+  "version": 4,
   "refresh": "30s",
   "time": { "from": "now-1h", "to": "now" },
   "timezone": "browser",
@@ -35,6 +35,7 @@
         "type": "query",
         "datasource": { "type": "prometheus", "uid": "${datasource}" },
         "query": { "query": "label_values(tcp_bridge_connection_state{job=\"$job\"}, pod)", "refId": "A" },
+        "regex": "/(tcp-bridge-[0-9]+).*/",
         "refresh": 2,
         "includeAll": true,
         "allValue": ".*",
@@ -71,11 +72,12 @@
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
         {
-          "expr": "tcp_bridge_connection_state{job=\"$job\", pod=~\"$pod\"}",
-          "legendFormat": "{{pod}} / {{connection_id}}",
+          "expr": "max by (pod_group, connection_id) (label_replace(tcp_bridge_connection_state{job=\"$job\", pod=~\"$pod(-.*)?\"}, \"pod_group\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\"))",
+          "legendFormat": "{{pod_group}} / {{connection_id}}",
           "refId": "A"
         }
       ],
+      "instant": true,
       "options": {
         "reduceOptions": { "calcs": ["lastNotNull"] },
         "orientation": "auto",
@@ -101,11 +103,12 @@
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
         {
-          "expr": "tcp_bridge_selected_connection{job=\"$job\", pod=~\"$pod\"} == 1",
-          "legendFormat": "{{pod}} / {{connection_id}}",
+          "expr": "max by (pod_group, connection_id) (label_replace(tcp_bridge_selected_connection{job=\"$job\", pod=~\"$pod(-.*)?\"} == 1, \"pod_group\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\"))",
+          "legendFormat": "{{pod_group}} / {{connection_id}}",
           "refId": "A"
         }
       ],
+      "instant": true,
       "options": {
         "reduceOptions": { "calcs": ["lastNotNull"] },
         "colorMode": "background",
@@ -128,8 +131,8 @@
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
         {
-          "expr": "tcp_bridge_connection_state{job=\"$job\", pod=~\"$pod\"}",
-          "legendFormat": "{{pod}} / {{connection_id}}",
+          "expr": "max by (pod_group, connection_id) (label_replace(tcp_bridge_connection_state{job=\"$job\", pod=~\"$pod(-.*)?\"}, \"pod_group\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\"))",
+          "legendFormat": "{{pod_group}} / {{connection_id}}",
           "refId": "A"
         }
       ],
@@ -239,12 +242,12 @@
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
         {
-          "expr": "sum by (sys_id) (rate(tcp_bridge_inbound_requests_total{job=\"$job\", pod=~\"$pod\"}[$__rate_interval]))",
+          "expr": "sum by (sys_id) (rate(tcp_bridge_inbound_requests_total{job=\"$job\", pod=~\"$pod(-.*)?\"}[$__rate_interval]))",
           "legendFormat": "{{sys_id}} requests",
           "refId": "A"
         },
         {
-          "expr": "sum by (sys_id, status) (rate(tcp_bridge_inbound_responses_total{job=\"$job\", pod=~\"$pod\"}[$__rate_interval]))",
+          "expr": "sum by (sys_id, status) (rate(tcp_bridge_inbound_responses_total{job=\"$job\", pod=~\"$pod(-.*)?\"}[$__rate_interval]))",
           "legendFormat": "{{sys_id}} responses/{{status}}",
           "refId": "B"
         }
@@ -382,17 +385,17 @@
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum by (sys_id, le) (rate(tcp_bridge_inbound_end_to_end_duration_seconds_bucket{job=\"$job\", pod=~\"$pod\", status=\"success\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.50, sum by (sys_id, le) (rate(tcp_bridge_inbound_end_to_end_duration_seconds_bucket{job=\"$job\", pod=~\"$pod(-.*)?\", status=\"success\"}[$__rate_interval])))",
           "legendFormat": "{{sys_id}} p50",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, sum by (sys_id, le) (rate(tcp_bridge_inbound_end_to_end_duration_seconds_bucket{job=\"$job\", pod=~\"$pod\", status=\"success\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.95, sum by (sys_id, le) (rate(tcp_bridge_inbound_end_to_end_duration_seconds_bucket{job=\"$job\", pod=~\"$pod(-.*)?\", status=\"success\"}[$__rate_interval])))",
           "legendFormat": "{{sys_id}} p95",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.99, sum by (sys_id, le) (rate(tcp_bridge_inbound_end_to_end_duration_seconds_bucket{job=\"$job\", pod=~\"$pod\", status=\"success\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.99, sum by (sys_id, le) (rate(tcp_bridge_inbound_end_to_end_duration_seconds_bucket{job=\"$job\", pod=~\"$pod(-.*)?\", status=\"success\"}[$__rate_interval])))",
           "legendFormat": "{{sys_id}} p99",
           "refId": "C"
         }
@@ -500,12 +503,12 @@
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
         {
-          "expr": "sum by (sys_id) (rate(tcp_bridge_outbound_requests_total{job=\"$job\", pod=~\"$pod\"}[$__rate_interval]))",
+          "expr": "sum by (sys_id) (rate(tcp_bridge_outbound_requests_total{job=\"$job\", pod=~\"$pod(-.*)?\"}[$__rate_interval]))",
           "legendFormat": "{{sys_id}} requests",
           "refId": "A"
         },
         {
-          "expr": "sum by (sys_id, status) (rate(tcp_bridge_outbound_responses_total{job=\"$job\", pod=~\"$pod\"}[$__rate_interval]))",
+          "expr": "sum by (sys_id, status) (rate(tcp_bridge_outbound_responses_total{job=\"$job\", pod=~\"$pod(-.*)?\"}[$__rate_interval]))",
           "legendFormat": "{{sys_id}} responses/{{status}}",
           "refId": "B"
         }
@@ -643,17 +646,17 @@
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum by (sys_id, le) (rate(tcp_bridge_outbound_end_to_end_duration_seconds_bucket{job=\"$job\", pod=~\"$pod\", status=\"success\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.50, sum by (sys_id, le) (rate(tcp_bridge_outbound_end_to_end_duration_seconds_bucket{job=\"$job\", pod=~\"$pod(-.*)?\", status=\"success\"}[$__rate_interval])))",
           "legendFormat": "{{sys_id}} p50",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, sum by (sys_id, le) (rate(tcp_bridge_outbound_end_to_end_duration_seconds_bucket{job=\"$job\", pod=~\"$pod\", status=\"success\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.95, sum by (sys_id, le) (rate(tcp_bridge_outbound_end_to_end_duration_seconds_bucket{job=\"$job\", pod=~\"$pod(-.*)?\", status=\"success\"}[$__rate_interval])))",
           "legendFormat": "{{sys_id}} p95",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.99, sum by (sys_id, le) (rate(tcp_bridge_outbound_end_to_end_duration_seconds_bucket{job=\"$job\", pod=~\"$pod\", status=\"success\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.99, sum by (sys_id, le) (rate(tcp_bridge_outbound_end_to_end_duration_seconds_bucket{job=\"$job\", pod=~\"$pod(-.*)?\", status=\"success\"}[$__rate_interval])))",
           "legendFormat": "{{sys_id}} p99",
           "refId": "C"
         }
