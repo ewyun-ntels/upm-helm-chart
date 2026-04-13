@@ -26,12 +26,14 @@ spec:
           expr: |
             label_replace(
               (
-                sum by (job, namespace, pod) (rate(tcp_bridge_inbound_responses_total[2m]))
+                sum by (job, namespace, pod) (rate(tcp_bridge_inbound_responses_total{status="success"}[2m]))
                 /
-                (sum by (job, namespace, pod) (rate(tcp_bridge_inbound_requests_total[2m])) > 0)
+                clamp_min(sum by (job, namespace, pod) (rate(tcp_bridge_inbound_requests_total[2m])), 1)
               ),
               "sys_id", "$1", "pod", ".*(tcp-bridge-[0-9]+).*"
             )
+            and on (job, namespace, pod)
+            sum by (job, namespace, pod) (rate(tcp_bridge_inbound_requests_total[2m])) > 0
 
         # 에러율: 전체 응답 대비 에러 응답 비율 (0~1, 정상이면 ~0)
         - record: tcp_bridge:inbound_error_rate:2m
@@ -40,10 +42,12 @@ spec:
               (
                 sum by (job, namespace, pod) (rate(tcp_bridge_inbound_responses_total{status=~"error|timeout|dropped"}[2m]))
                 /
-                (sum by (job, namespace, pod) (rate(tcp_bridge_inbound_responses_total[2m])) > 0)
+                clamp_min(sum by (job, namespace, pod) (rate(tcp_bridge_inbound_responses_total[2m])), 1)
               ),
               "sys_id", "$1", "pod", ".*(tcp-bridge-[0-9]+).*"
             )
+            and on (job, namespace, pod)
+            sum by (job, namespace, pod) (rate(tcp_bridge_inbound_responses_total[2m])) > 0
 
         # (기존) 에러 발생 건수 - 레거시 호환용
         - record: tcp_bridge:inbound_error_count:2m
@@ -61,12 +65,14 @@ spec:
           expr: |
             label_replace(
               (
-                sum by (job, namespace, pod) (rate(tcp_bridge_outbound_responses_total[2m]))
+                sum by (job, namespace, pod) (rate(tcp_bridge_outbound_responses_total{status="success"}[2m]))
                 /
-                (sum by (job, namespace, pod) (rate(tcp_bridge_outbound_requests_total[2m])) > 0)
+                clamp_min(sum by (job, namespace, pod) (rate(tcp_bridge_outbound_requests_total[2m])), 1)
               ),
               "sys_id", "$1", "pod", ".*(tcp-bridge-[0-9]+).*"
             )
+            and on (job, namespace, pod)
+            sum by (job, namespace, pod) (rate(tcp_bridge_outbound_requests_total[2m])) > 0
 
         # 에러율: 전체 응답 대비 에러 응답 비율 (0~1, 정상이면 ~0)
         - record: tcp_bridge:outbound_error_rate:2m
@@ -75,10 +81,12 @@ spec:
               (
                 sum by (job, namespace, pod) (rate(tcp_bridge_outbound_responses_total{status=~"error|timeout|dropped"}[2m]))
                 /
-                (sum by (job, namespace, pod) (rate(tcp_bridge_outbound_responses_total[2m])) > 0)
+                clamp_min(sum by (job, namespace, pod) (rate(tcp_bridge_outbound_responses_total[2m])), 1)
               ),
               "sys_id", "$1", "pod", ".*(tcp-bridge-[0-9]+).*"
             )
+            and on (job, namespace, pod)
+            sum by (job, namespace, pod) (rate(tcp_bridge_outbound_responses_total[2m])) > 0
 
         # (기존) 에러 발생 건수 - 레거시 호환용
         - record: tcp_bridge:outbound_error_count:2m

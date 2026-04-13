@@ -1,11 +1,18 @@
 {
   "title": "TCP Bridge Monitoring",
   "uid": "tcp-bridge-overview",
-  "tags": ["tcp-bridge", "connectivity", "traffic-quality"],
+  "tags": [
+    "tcp-bridge",
+    "traffic-quality",
+    "recording-rules"
+  ],
   "schemaVersion": 38,
-  "version": 4,
+  "version": 7,
   "refresh": "30s",
-  "time": { "from": "now-1h", "to": "now" },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
   "timezone": "browser",
   "graphTooltip": 1,
   "templating": {
@@ -25,17 +32,31 @@
       {
         "name": "job",
         "type": "query",
-        "datasource": { "type": "prometheus", "uid": "${datasource}" },
-        "query": { "query": "label_values(tcp_bridge_connection_state, job)", "refId": "A" },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": {
+          "query": "label_values(tcp_bridge:ready_connection_state:max, job)",
+          "refId": "A"
+        },
         "refresh": 2,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
         "hide": 0
       },
       {
         "name": "pod",
         "type": "query",
-        "datasource": { "type": "prometheus", "uid": "${datasource}" },
-        "query": { "query": "label_values(tcp_bridge_connection_state{job=\"$job\"}, pod)", "refId": "A" },
-        "regex": "/(tcp-bridge-[0-9]+).*/",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": {
+          "query": "label_values(tcp_bridge:ready_connection_state:max{job=~\"$job\"}, pod)",
+          "refId": "A"
+        },
         "refresh": 2,
         "includeAll": true,
         "allValue": ".*",
@@ -45,8 +66,14 @@
       {
         "name": "sys_id",
         "type": "query",
-        "datasource": { "type": "prometheus", "uid": "${datasource}" },
-        "query": { "query": "label_values(tcp_bridge:inbound_communication_rate:2m, sys_id)", "refId": "A" },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": {
+          "query": "label_values(tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\"}, sys_id)",
+          "refId": "A"
+        },
         "refresh": 2,
         "includeAll": true,
         "allValue": ".*",
@@ -59,27 +86,723 @@
     {
       "id": 1,
       "type": "row",
-      "title": "🔌 Connection Status",
-      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 },
+      "title": "Rule Based Overview",
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 24,
+        "h": 1
+      },
       "collapsed": false
     },
     {
       "id": 2,
-      "type": "stat",
-      "title": "Connection State",
-      "description": "2=Ready, 1=Connecting, 0=Disconnected",
-      "gridPos": { "x": 0, "y": 1, "w": 12, "h": 4 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "type": "bargauge",
+      "title": "Inbound Communication Rate 2m",
+      "description": "recording-rule \uae30\uc900 \ud604\uc7ac inbound \uc131\uacf5 \uc751\ub2f5 \ube44\uc728. 95% \uc774\uc0c1 \uc815\uc0c1.",
+      "gridPos": {
+        "x": 0,
+        "y": 7,
+        "w": 6,
+        "h": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
       "targets": [
         {
-          "expr": "max by (pod_group, connection_id) (label_replace(tcp_bridge_connection_state{job=\"$job\", pod=~\"$pod(-.*)?\"}, \"pod_group\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\"))",
+          "expr": "tcp_bridge:inbound_communication_rate:2m{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"}",
+          "legendFormat": "{{sys_id}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        },
+        "showUnfilled": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.9
+              },
+              {
+                "color": "green",
+                "value": 0.95
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "bargauge",
+      "title": "Inbound Error Rate 2m",
+      "description": "recording-rule \uae30\uc900 \ud604\uc7ac inbound \uc5d0\ub7ec\uc728. 1%/3%/5% \uc784\uacc4\uac12 \ubc18\uc601.",
+      "gridPos": {
+        "x": 6,
+        "y": 7,
+        "w": 6,
+        "h": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "tcp_bridge:inbound_error_rate:2m{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"}",
+          "legendFormat": "{{sys_id}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        },
+        "showUnfilled": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 0.1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.01
+              },
+              {
+                "color": "orange",
+                "value": 0.03
+              },
+              {
+                "color": "red",
+                "value": 0.05
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "bargauge",
+      "title": "Outbound Communication Rate 2m",
+      "description": "recording-rule \uae30\uc900 \ud604\uc7ac outbound \uc131\uacf5 \uc751\ub2f5 \ube44\uc728. 95% \uc774\uc0c1 \uc815\uc0c1.",
+      "gridPos": {
+        "x": 12,
+        "y": 7,
+        "w": 6,
+        "h": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "tcp_bridge:outbound_communication_rate:2m{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"}",
+          "legendFormat": "{{sys_id}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        },
+        "showUnfilled": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.9
+              },
+              {
+                "color": "green",
+                "value": 0.95
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "bargauge",
+      "title": "Outbound Error Rate 2m",
+      "description": "recording-rule \uae30\uc900 \ud604\uc7ac outbound \uc5d0\ub7ec\uc728. 1%/3%/5% \uc784\uacc4\uac12 \ubc18\uc601.",
+      "gridPos": {
+        "x": 18,
+        "y": 7,
+        "w": 6,
+        "h": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "tcp_bridge:outbound_error_rate:2m{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"}",
+          "legendFormat": "{{sys_id}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        },
+        "showUnfilled": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 0.1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.01
+              },
+              {
+                "color": "orange",
+                "value": 0.03
+              },
+              {
+                "color": "red",
+                "value": 0.05
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Inbound Communication And Error Trend",
+      "description": "\uc18c\ud1b5\ub960 95% \uc774\uc0c1, \uc5d0\ub7ec\uc728 1% \ubbf8\ub9cc \uae30\uc900\uc73c\ub85c \ucd94\uc774 \ud655\uc778.",
+      "gridPos": {
+        "x": 0,
+        "y": 13,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "tcp_bridge:inbound_communication_rate:2m{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"}",
+          "legendFormat": "{{sys_id}} communication",
+          "refId": "A"
+        },
+        {
+          "expr": "tcp_bridge:inbound_error_rate:2m{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"}",
+          "legendFormat": "{{sys_id}} error",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*error"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 0.01
+                    },
+                    {
+                      "color": "orange",
+                      "value": 0.03
+                    },
+                    {
+                      "color": "red",
+                      "value": 0.05
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*communication"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 0.9
+                    },
+                    {
+                      "color": "green",
+                      "value": 0.95
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "mean"
+          ]
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Outbound Communication And Error Trend",
+      "description": "\uc18c\ud1b5\ub960 95% \uc774\uc0c1, \uc5d0\ub7ec\uc728 1% \ubbf8\ub9cc \uae30\uc900\uc73c\ub85c \ucd94\uc774 \ud655\uc778.",
+      "gridPos": {
+        "x": 12,
+        "y": 13,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "tcp_bridge:outbound_communication_rate:2m{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"}",
+          "legendFormat": "{{sys_id}} communication",
+          "refId": "A"
+        },
+        {
+          "expr": "tcp_bridge:outbound_error_rate:2m{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"}",
+          "legendFormat": "{{sys_id}} error",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*error"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 0.01
+                    },
+                    {
+                      "color": "orange",
+                      "value": 0.03
+                    },
+                    {
+                      "color": "red",
+                      "value": 0.05
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*communication"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 0.9
+                    },
+                    {
+                      "color": "green",
+                      "value": 0.95
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "mean"
+          ]
+        }
+      }
+    },
+    {
+      "id": 10,
+      "type": "row",
+      "title": "Traffic Detail",
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Inbound Request And Response Rate",
+      "description": "\uc6d0\uc2dc \uce74\uc6b4\ud130 \uae30\ubc18 \ucc98\ub9ac\ub7c9. success/error/timeout/dropped \uc751\ub2f5 \ubd84\ud3ec \ud655\uc778.",
+      "gridPos": {
+        "x": 0,
+        "y": 21,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "sum by (sys_id) (rate(tcp_bridge_inbound_requests_total{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"}[$__rate_interval]))",
+          "legendFormat": "{{sys_id}} requests",
+          "refId": "A"
+        },
+        {
+          "expr": "sum by (sys_id, status) (rate(tcp_bridge_inbound_responses_total{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"}[$__rate_interval]))",
+          "legendFormat": "{{sys_id}} responses/{{status}}",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 8
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "mean"
+          ]
+        }
+      }
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Outbound Request And Response Rate",
+      "description": "\uc6d0\uc2dc \uce74\uc6b4\ud130 \uae30\ubc18 \ucc98\ub9ac\ub7c9. success/error/timeout/dropped \uc751\ub2f5 \ubd84\ud3ec \ud655\uc778.",
+      "gridPos": {
+        "x": 12,
+        "y": 21,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "sum by (sys_id) (rate(tcp_bridge_outbound_requests_total{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"}[$__rate_interval]))",
+          "legendFormat": "{{sys_id}} requests",
+          "refId": "A"
+        },
+        {
+          "expr": "sum by (sys_id, status) (rate(tcp_bridge_outbound_responses_total{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"}[$__rate_interval]))",
+          "legendFormat": "{{sys_id}} responses/{{status}}",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 8
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "mean"
+          ]
+        }
+      }
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Inbound Error Count 2m",
+      "description": "recording-rule\uc758 \ub808\uac70\uc2dc \ud638\ud658 error count. \ucd5c\uadfc 2\ubd84 \ub204\uc801 \uc5d0\ub7ec \uac74\uc218.",
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 12,
+        "h": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "tcp_bridge:inbound_error_count:2m{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"}",
+          "legendFormat": "{{sys_id}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 70
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        }
+      }
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Outbound Error Count 2m",
+      "description": "recording-rule\uc758 \ub808\uac70\uc2dc \ud638\ud658 error count. \ucd5c\uadfc 2\ubd84 \ub204\uc801 \uc5d0\ub7ec \uac74\uc218.",
+      "gridPos": {
+        "x": 12,
+        "y": 28,
+        "w": 12,
+        "h": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "tcp_bridge:outbound_error_count:2m{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"}",
+          "legendFormat": "{{sys_id}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 70
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        }
+      }
+    },
+    {
+      "id": 20,
+      "type": "row",
+      "title": "Connectivity",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false
+    },
+    {
+      "id": 21,
+      "type": "stat",
+      "title": "Ready Connection State",
+      "description": "recording-rule \uae30\uc900 connection \uc0c1\ud0dc. 2=Ready, 1=Connecting, 0=Disconnected.",
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 8,
+        "h": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "max by (pod_group, connection_id) (label_replace(tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"}, \"pod_group\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\"))",
           "legendFormat": "{{pod_group}} / {{connection_id}}",
           "refId": "A"
         }
       ],
       "instant": true,
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        },
         "orientation": "auto",
         "colorMode": "background",
         "graphMode": "none",
@@ -88,176 +811,136 @@
       "fieldConfig": {
         "defaults": {
           "mappings": [
-            { "type": "value", "options": { "0": { "text": "Disconnected", "color": "red" }, "1": { "text": "Connecting", "color": "yellow" }, "2": { "text": "Ready", "color": "green" } } }
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Disconnected",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "Connecting",
+                  "color": "yellow"
+                },
+                "2": {
+                  "text": "Ready",
+                  "color": "green"
+                }
+              }
+            }
           ],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "transparent", "value": null }] }
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              }
+            ]
+          }
         }
       }
     },
     {
-      "id": 3,
+      "id": 22,
       "type": "stat",
       "title": "Active Primary Connection",
-      "description": "현재 선택된 primary connection (outbound 전송 사용)",
-      "gridPos": { "x": 12, "y": 1, "w": 12, "h": 4 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "\ud604\uc7ac \uc120\ud0dd\ub41c primary connection. outbound \uc804\uc1a1\uc5d0 \uc0ac\uc6a9\ub418\ub294 active connection \ud45c\uc2dc.",
+      "gridPos": {
+        "x": 8,
+        "y": 1,
+        "w": 16,
+        "h": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
       "targets": [
         {
-          "expr": "max by (pod_group, connection_id) (label_replace(tcp_bridge_selected_connection{job=\"$job\", pod=~\"$pod(-.*)?\"} == 1, \"pod_group\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\"))",
+          "expr": "max by (pod_group, connection_id) (label_replace(tcp_bridge_selected_connection{job=~\"$job\", pod=~\"$pod\"} == 1, \"pod_group\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\"))",
           "legendFormat": "{{pod_group}} / {{connection_id}}",
           "refId": "A"
         }
       ],
       "instant": true,
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        },
+        "orientation": "auto",
         "colorMode": "background",
         "graphMode": "none",
         "textMode": "name"
       },
       "fieldConfig": {
         "defaults": {
-          "color": { "fixedColor": "green", "mode": "fixed" },
-          "mappings": [ { "type": "value", "options": { "1": { "text": "Active" } } } ]
+          "color": {
+            "fixedColor": "green",
+            "mode": "fixed"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "Active"
+                }
+              }
+            }
+          ]
         }
       }
     },
     {
-      "id": 4,
-      "type": "timeseries",
-      "title": "Connection State Over Time",
-      "description": "연결 상태 추이 (0=disconnected, 1=connecting, 2=ready)",
-      "gridPos": { "x": 0, "y": 5, "w": 24, "h": 6 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "targets": [
-        {
-          "expr": "max by (pod_group, connection_id) (label_replace(tcp_bridge_connection_state{job=\"$job\", pod=~\"$pod(-.*)?\"}, \"pod_group\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\"))",
-          "legendFormat": "{{pod_group}} / {{connection_id}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": { 
-          "unit": "short",
-          "min": 0,
-          "max": 2,
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "lineInterpolation": "stepAfter"
-          }
-        }
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        }
-      }
-    },
-    {
-      "id": 10,
+      "id": 30,
       "type": "row",
-      "title": "📥 Inbound Traffic Quality",
-      "gridPos": { "x": 0, "y": 11, "w": 24, "h": 1 },
+      "title": "Latency",
+      "gridPos": {
+        "x": 0,
+        "y": 34,
+        "w": 24,
+        "h": 1
+      },
       "collapsed": false
     },
     {
-      "id": 11,
-      "type": "gauge",
-      "title": "Inbound Communication Rate (소통률)",
-      "description": "Request 대비 Response 비율. 95% 이상이 정상. 낮으면 NATS 또는 downstream 서비스 문제 가능성.",
-      "gridPos": { "x": 0, "y": 12, "w": 6, "h": 6 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "targets": [
-        {
-          "expr": "tcp_bridge:inbound_communication_rate:2m{sys_id=~\"$sys_id\"}",
-          "legendFormat": "{{sys_id}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit",
-          "min": 0,
-          "max": 1,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "red", "value": null },
-              { "color": "yellow", "value": 0.90 },
-              { "color": "green", "value": 0.95 }
-            ]
-          }
-        }
-      },
-      "options": {
-        "showThresholdLabels": true,
-        "showThresholdMarkers": true
-      }
-    },
-    {
-      "id": 12,
-      "type": "gauge",
-      "title": "Inbound Error Rate (에러율)",
-      "description": "전체 응답 대비 error/timeout/dropped 비율. 1% 미만이 정상.",
-      "gridPos": { "x": 6, "y": 12, "w": 6, "h": 6 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "targets": [
-        {
-          "expr": "tcp_bridge:inbound_error_rate:2m{sys_id=~\"$sys_id\"}",
-          "legendFormat": "{{sys_id}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit",
-          "min": 0,
-          "max": 0.10,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 0.01 },
-              { "color": "orange", "value": 0.03 },
-              { "color": "red", "value": 0.05 }
-            ]
-          }
-        }
-      },
-      "options": {
-        "showThresholdLabels": true,
-        "showThresholdMarkers": true
-      }
-    },
-    {
-      "id": 13,
+      "id": 31,
       "type": "timeseries",
-      "title": "Inbound Request/Response Rate",
-      "description": "초당 처리량 (requests: TCP 수신, responses: NATS 처리 완료)",
-      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 6 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "title": "Inbound End-to-End Duration",
+      "description": "Histogram \uae30\ubc18 inbound end-to-end latency. \uc694\uccad \uc218\uc2e0\ubd80\ud130 \ucd5c\uc885 TCP \uc751\ub2f5 \ucc98\ub9ac\uae4c\uc9c0\uc758 p50/p95.",
+      "gridPos": {
+        "x": 0,
+        "y": 35,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
       "targets": [
         {
-          "expr": "sum by (sys_id) (rate(tcp_bridge_inbound_requests_total{job=\"$job\", pod=~\"$pod(-.*)?\"}[$__rate_interval]))",
-          "legendFormat": "{{sys_id}} requests",
+          "expr": "label_replace(histogram_quantile(0.50, sum by (le, pod) (rate(tcp_bridge_inbound_end_to_end_duration_seconds_bucket{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval]))), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\")",
+          "legendFormat": "{{sys_id}} p50",
           "refId": "A"
         },
         {
-          "expr": "sum by (sys_id, status) (rate(tcp_bridge_inbound_responses_total{job=\"$job\", pod=~\"$pod(-.*)?\"}[$__rate_interval]))",
-          "legendFormat": "{{sys_id}} responses/{{status}}",
+          "expr": "label_replace(histogram_quantile(0.95, sum by (le, pod) (rate(tcp_bridge_inbound_end_to_end_duration_seconds_bucket{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval]))), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\")",
+          "legendFormat": "{{sys_id}} p95",
           "refId": "B"
         }
       ],
       "fieldConfig": {
-        "defaults": { 
-          "unit": "reqps",
+        "defaults": {
+          "unit": "s",
+          "min": 0,
           "custom": {
             "drawStyle": "line",
-            "lineWidth": 1,
+            "lineWidth": 2,
             "fillOpacity": 10
           }
         }
@@ -267,258 +950,48 @@
           "displayMode": "table",
           "placement": "bottom",
           "showLegend": true,
-          "calcs": ["mean", "lastNotNull"]
+          "calcs": [
+            "lastNotNull",
+            "mean",
+            "max"
+          ]
         }
       }
     },
     {
-      "id": 14,
+      "id": 32,
       "type": "timeseries",
-      "title": "Inbound Communication Rate Trend",
-      "description": "소통률 추이 (>= 0.95 정상)",
-      "gridPos": { "x": 0, "y": 18, "w": 12, "h": 6 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "targets": [
-        {
-          "expr": "tcp_bridge:inbound_communication_rate:2m{sys_id=~\"$sys_id\"}",
-          "legendFormat": "{{sys_id}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": { 
-          "unit": "percentunit",
-          "min": 0,
-          "max": 1,
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 20
-          }
-        },
-        "overrides": [
-          {
-            "matcher": { "id": "byRegexp", "options": ".*" },
-            "properties": [
-              {
-                "id": "thresholds",
-                "value": {
-                  "mode": "absolute",
-                  "steps": [
-                    { "color": "transparent", "value": null },
-                    { "color": "red", "value": 0 },
-                    { "color": "green", "value": 0.95 }
-                  ]
-                }
-              }
-            ]
-          }
-        ]
+      "title": "Outbound End-to-End Duration",
+      "description": "Histogram \uae30\ubc18 outbound end-to-end latency. \uc694\uccad \uc218\uc2e0\ubd80\ud130 \ucd5c\uc885 NATS reply \ubc1c\ud589\uae4c\uc9c0\uc758 p50/p95.",
+      "gridPos": {
+        "x": 12,
+        "y": 35,
+        "w": 12,
+        "h": 7
       },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        }
-      }
-    },
-    {
-      "id": 15,
-      "type": "timeseries",
-      "title": "Inbound Error Rate Trend",
-      "description": "에러율 추이 (< 0.01 정상)",
-      "gridPos": { "x": 12, "y": 18, "w": 12, "h": 6 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "targets": [
-        {
-          "expr": "tcp_bridge:inbound_error_rate:2m{sys_id=~\"$sys_id\"}",
-          "legendFormat": "{{sys_id}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": { 
-          "unit": "percentunit",
-          "min": 0,
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 20
-          }
-        },
-        "overrides": [
-          {
-            "matcher": { "id": "byRegexp", "options": ".*" },
-            "properties": [
-              {
-                "id": "thresholds",
-                "value": {
-                  "mode": "absolute",
-                  "steps": [
-                    { "color": "transparent", "value": null },
-                    { "color": "green", "value": 0 },
-                    { "color": "yellow", "value": 0.01 },
-                    { "color": "orange", "value": 0.03 },
-                    { "color": "red", "value": 0.05 }
-                  ]
-                }
-              }
-            ]
-          }
-        ]
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
       },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        }
-      }
-    },
-    {
-      "id": 16,
-      "type": "timeseries",
-      "title": "Inbound End-to-End Duration (p50/p95/p99)",
-      "description": "TCP 요청 수신부터 TCP 응답 전송 완료까지의 전체 처리 시간 (histogram 기반)\n\n• p50 (median): 전체 요청의 50%가 이 시간 이하로 처리됨 (일반적인 응답 시간)\n• p95: 전체 요청의 95%가 이 시간 이하 (대부분 사용자 경험)\n• p99: 전체 요청의 99%가 이 시간 이하 (최악의 경우 감지)\n\n⚠️ 주의: histogram bucket 기반 근사치입니다. p95/p99가 급증하면 일부 요청이 매우 느려진 것이며, NATS 또는 downstream 서비스 응답 시간을 확인하세요.",
-      "gridPos": { "x": 0, "y": 24, "w": 24, "h": 6 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum by (sys_id, le) (rate(tcp_bridge_inbound_end_to_end_duration_seconds_bucket{job=\"$job\", pod=~\"$pod(-.*)?\", status=\"success\"}[$__rate_interval])))",
+          "expr": "label_replace(histogram_quantile(0.50, sum by (le, pod) (rate(tcp_bridge_outbound_end_to_end_duration_seconds_bucket{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval]))), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\")",
           "legendFormat": "{{sys_id}} p50",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, sum by (sys_id, le) (rate(tcp_bridge_inbound_end_to_end_duration_seconds_bucket{job=\"$job\", pod=~\"$pod(-.*)?\", status=\"success\"}[$__rate_interval])))",
+          "expr": "label_replace(histogram_quantile(0.95, sum by (le, pod) (rate(tcp_bridge_outbound_end_to_end_duration_seconds_bucket{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval]))), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\")",
           "legendFormat": "{{sys_id}} p95",
           "refId": "B"
-        },
-        {
-          "expr": "histogram_quantile(0.99, sum by (sys_id, le) (rate(tcp_bridge_inbound_end_to_end_duration_seconds_bucket{job=\"$job\", pod=~\"$pod(-.*)?\", status=\"success\"}[$__rate_interval])))",
-          "legendFormat": "{{sys_id}} p99",
-          "refId": "C"
         }
       ],
       "fieldConfig": {
-        "defaults": { 
+        "defaults": {
           "unit": "s",
+          "min": 0,
           "custom": {
             "drawStyle": "line",
-            "lineWidth": 1
-          }
-        }
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true,
-          "calcs": ["mean", "max"]
-        }
-      }
-    },
-    {
-      "id": 20,
-      "type": "row",
-      "title": "📤 Outbound Traffic Quality",
-      "gridPos": { "x": 0, "y": 30, "w": 24, "h": 1 },
-      "collapsed": false
-    },
-    {
-      "id": 21,
-      "type": "gauge",
-      "title": "Outbound Communication Rate (소통률)",
-      "description": "Request 대비 Response 비율. 95% 이상이 정상. 낮으면 TCP peer 연결 또는 응답 지연 문제 가능성.",
-      "gridPos": { "x": 0, "y": 31, "w": 6, "h": 6 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "targets": [
-        {
-          "expr": "tcp_bridge:outbound_communication_rate:2m{sys_id=~\"$sys_id\"}",
-          "legendFormat": "{{sys_id}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit",
-          "min": 0,
-          "max": 1,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "red", "value": null },
-              { "color": "yellow", "value": 0.90 },
-              { "color": "green", "value": 0.95 }
-            ]
-          }
-        }
-      },
-      "options": {
-        "showThresholdLabels": true,
-        "showThresholdMarkers": true
-      }
-    },
-    {
-      "id": 22,
-      "type": "gauge",
-      "title": "Outbound Error Rate (에러율)",
-      "description": "전체 응답 대비 error/timeout/dropped 비율. 1% 미만이 정상.",
-      "gridPos": { "x": 6, "y": 31, "w": 6, "h": 6 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "targets": [
-        {
-          "expr": "tcp_bridge:outbound_error_rate:2m{sys_id=~\"$sys_id\"}",
-          "legendFormat": "{{sys_id}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit",
-          "min": 0,
-          "max": 0.10,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 0.01 },
-              { "color": "orange", "value": 0.03 },
-              { "color": "red", "value": 0.05 }
-            ]
-          }
-        }
-      },
-      "options": {
-        "showThresholdLabels": true,
-        "showThresholdMarkers": true
-      }
-    },
-    {
-      "id": 23,
-      "type": "timeseries",
-      "title": "Outbound Request/Response Rate",
-      "description": "초당 처리량 (requests: NATS 수신, responses: TCP 처리 완료)",
-      "gridPos": { "x": 12, "y": 31, "w": 12, "h": 6 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "targets": [
-        {
-          "expr": "sum by (sys_id) (rate(tcp_bridge_outbound_requests_total{job=\"$job\", pod=~\"$pod(-.*)?\"}[$__rate_interval]))",
-          "legendFormat": "{{sys_id}} requests",
-          "refId": "A"
-        },
-        {
-          "expr": "sum by (sys_id, status) (rate(tcp_bridge_outbound_responses_total{job=\"$job\", pod=~\"$pod(-.*)?\"}[$__rate_interval]))",
-          "legendFormat": "{{sys_id}} responses/{{status}}",
-          "refId": "B"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": { 
-          "unit": "reqps",
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 1,
+            "lineWidth": 2,
             "fillOpacity": 10
           }
         }
@@ -528,145 +1001,123 @@
           "displayMode": "table",
           "placement": "bottom",
           "showLegend": true,
-          "calcs": ["mean", "lastNotNull"]
+          "calcs": [
+            "lastNotNull",
+            "mean",
+            "max"
+          ]
         }
       }
     },
     {
-      "id": 24,
-      "type": "timeseries",
-      "title": "Outbound Communication Rate Trend",
-      "description": "소통률 추이 (>= 0.95 정상)",
-      "gridPos": { "x": 0, "y": 37, "w": 12, "h": 6 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "id": 40,
+      "type": "row",
+      "title": "Label Breakdown",
+      "gridPos": {
+        "x": 0,
+        "y": 42,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false
+    },
+    {
+      "id": 41,
+      "type": "stat",
+      "title": "Connection State By Endpoint",
+      "description": "connection_id와 무관하게 endpoint별 현재 connection 상태를 표시. 2=Ready, 1=Connecting, 0=Disconnected.",
+      "gridPos": {
+        "x": 0,
+        "y": 43,
+        "w": 24,
+        "h": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
       "targets": [
         {
-          "expr": "tcp_bridge:outbound_communication_rate:2m{sys_id=~\"$sys_id\"}",
-          "legendFormat": "{{sys_id}}",
+          "expr": "max by (sys_id, endpoint) (label_replace(tcp_bridge_connection_state{job=~\"$job\", pod=~\"$pod\"}, \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\")) and on (sys_id) max by (sys_id) (tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"})",
+          "legendFormat": "{{sys_id}} / {{endpoint}}",
           "refId": "A"
         }
       ],
-      "fieldConfig": {
-        "defaults": { 
-          "unit": "percentunit",
-          "min": 0,
-          "max": 1,
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 20
-          }
+      "instant": true,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
         },
-        "overrides": [
-          {
-            "matcher": { "id": "byRegexp", "options": ".*" },
-            "properties": [
-              {
-                "id": "thresholds",
-                "value": {
-                  "mode": "absolute",
-                  "steps": [
-                    { "color": "transparent", "value": null },
-                    { "color": "red", "value": 0 },
-                    { "color": "green", "value": 0.95 }
-                  ]
+        "orientation": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Disconnected",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "Connecting",
+                  "color": "yellow"
+                },
+                "2": {
+                  "text": "Ready",
+                  "color": "green"
                 }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
               }
             ]
           }
-        ]
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
         }
       }
     },
     {
-      "id": 25,
+      "id": 42,
       "type": "timeseries",
-      "title": "Outbound Error Rate Trend",
-      "description": "에러율 추이 (< 0.01 정상)",
-      "gridPos": { "x": 12, "y": 37, "w": 12, "h": 6 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "targets": [
-        {
-          "expr": "tcp_bridge:outbound_error_rate:2m{sys_id=~\"$sys_id\"}",
-          "legendFormat": "{{sys_id}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": { 
-          "unit": "percentunit",
-          "min": 0,
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 2,
-            "fillOpacity": 20
-          }
-        },
-        "overrides": [
-          {
-            "matcher": { "id": "byRegexp", "options": ".*" },
-            "properties": [
-              {
-                "id": "thresholds",
-                "value": {
-                  "mode": "absolute",
-                  "steps": [
-                    { "color": "transparent", "value": null },
-                    { "color": "green", "value": 0 },
-                    { "color": "yellow", "value": 0.01 },
-                    { "color": "orange", "value": 0.03 },
-                    { "color": "red", "value": 0.05 }
-                  ]
-                }
-              }
-            ]
-          }
-        ]
+      "title": "Inbound Request Rate By Msg Type",
+      "description": "connection_id를 제외하고 msg_type별 inbound request 처리량을 합산.",
+      "gridPos": {
+        "x": 0,
+        "y": 48,
+        "w": 12,
+        "h": 7
       },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        }
-      }
-    },
-    {
-      "id": 26,
-      "type": "timeseries",
-      "title": "Outbound End-to-End Duration (p50/p95/p99)",
-      "description": "NATS 요청 수신부터 NATS reply 발행까지의 전체 처리 시간 (histogram 기반)\n\n• p50 (median): 전체 요청의 50%가 이 시간 이하로 처리됨 (일반적인 응답 시간)\n• p95: 전체 요청의 95%가 이 시간 이하 (대부분 사용자 경험)\n• p99: 전체 요청의 99%가 이 시간 이하 (최악의 경우 감지)\n\n⚠️ 주의: histogram bucket 기반 근사치입니다. p95/p99가 급증하면 일부 요청이 매우 느려진 것이며, TCP peer 응답 지연 또는 retry/failover 발생 여부를 확인하세요.",
-      "gridPos": { "x": 0, "y": 43, "w": 24, "h": 6 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum by (sys_id, le) (rate(tcp_bridge_outbound_end_to_end_duration_seconds_bucket{job=\"$job\", pod=~\"$pod(-.*)?\", status=\"success\"}[$__rate_interval])))",
-          "legendFormat": "{{sys_id}} p50",
+          "expr": "sum by (sys_id, msg_type) (label_replace(rate(tcp_bridge_inbound_requests_total{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\")) and on (sys_id) max by (sys_id) (tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"})",
+          "legendFormat": "{{sys_id}} / {{msg_type}}",
           "refId": "A"
-        },
-        {
-          "expr": "histogram_quantile(0.95, sum by (sys_id, le) (rate(tcp_bridge_outbound_end_to_end_duration_seconds_bucket{job=\"$job\", pod=~\"$pod(-.*)?\", status=\"success\"}[$__rate_interval])))",
-          "legendFormat": "{{sys_id}} p95",
-          "refId": "B"
-        },
-        {
-          "expr": "histogram_quantile(0.99, sum by (sys_id, le) (rate(tcp_bridge_outbound_end_to_end_duration_seconds_bucket{job=\"$job\", pod=~\"$pod(-.*)?\", status=\"success\"}[$__rate_interval])))",
-          "legendFormat": "{{sys_id}} p99",
-          "refId": "C"
         }
       ],
       "fieldConfig": {
-        "defaults": { 
-          "unit": "s",
+        "defaults": {
+          "unit": "reqps",
           "custom": {
             "drawStyle": "line",
-            "lineWidth": 1
+            "lineWidth": 1,
+            "fillOpacity": 8
           }
         }
       },
@@ -675,7 +1126,146 @@
           "displayMode": "table",
           "placement": "bottom",
           "showLegend": true,
-          "calcs": ["mean", "max"]
+          "calcs": [
+            "lastNotNull",
+            "mean",
+            "max"
+          ]
+        }
+      }
+    },
+    {
+      "id": 43,
+      "type": "timeseries",
+      "title": "Inbound Response Rate By Msg Type And Status",
+      "description": "connection_id를 제외하고 msg_type, status별 inbound response 처리량을 합산.",
+      "gridPos": {
+        "x": 12,
+        "y": 48,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "topk(20, sum by (sys_id, msg_type, status) (label_replace(rate(tcp_bridge_inbound_responses_total{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\"))) and on (sys_id) max by (sys_id) (tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"})",
+          "legendFormat": "{{sys_id}} / {{msg_type}} / {{status}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 8
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "mean",
+            "max"
+          ]
+        }
+      }
+    },
+    {
+      "id": 44,
+      "type": "timeseries",
+      "title": "Outbound Request Rate By Subject And Msg Type",
+      "description": "connection_id를 제외하고 subject, msg_type별 outbound request 처리량을 합산.",
+      "gridPos": {
+        "x": 0,
+        "y": 55,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "topk(20, sum by (sys_id, subject, msg_type) (label_replace(rate(tcp_bridge_outbound_requests_total{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\"))) and on (sys_id) max by (sys_id) (tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"})",
+          "legendFormat": "{{sys_id}} / {{subject}} / {{msg_type}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 8
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "mean",
+            "max"
+          ]
+        }
+      }
+    },
+    {
+      "id": 45,
+      "type": "timeseries",
+      "title": "Outbound Response Rate By Subject Msg Type And Status",
+      "description": "connection_id를 제외하고 subject, msg_type, status별 outbound response 처리량을 합산.",
+      "gridPos": {
+        "x": 12,
+        "y": 55,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "topk(20, sum by (sys_id, subject, msg_type, status) (label_replace(rate(tcp_bridge_outbound_responses_total{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\"))) and on (sys_id) max by (sys_id) (tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"})",
+          "legendFormat": "{{sys_id}} / {{subject}} / {{msg_type}} / {{status}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 8
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "mean",
+            "max"
+          ]
         }
       }
     }
