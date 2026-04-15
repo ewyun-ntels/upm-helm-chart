@@ -576,7 +576,7 @@
     {
       "id": 11,
       "type": "timeseries",
-      "title": "Inbound Request And Response Rate By Reason",
+      "title": "Inbound Request And Response Count By Reason",
       "description": "\uc6d0\uc2dc \uce74\uc6b4\ud130 \uae30\ubc18 \ucc98\ub9ac\ub7c9. reason\ubcc4 \uc751\ub2f5 \ubd84\ud3ec \ud655\uc778. ok=\uc815\uc0c1, queue_full=queue\ud3ec\ud654, unknown_message_type=subject\ub9e4\ud551\uc2e4\ud328, nats_request_timeout/failed=NATS\uc624\ub958, tcp_response_write_failed=TCP\uc751\ub2f5\uc2e4\ud328, inflight_expired=timeout.",
       "gridPos": {
         "x": 0,
@@ -590,24 +590,25 @@
       },
       "targets": [
         {
-          "expr": "sum by (sys_id) (label_replace(sum by (pod) (increase(tcp_bridge_inbound_requests_total{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval])), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\"))",
-          "legendFormat": "{{sys_id}} [REQ]",
+          "expr": "sum(increase(tcp_bridge_inbound_requests_total{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval]))",
+          "legendFormat": "[REQ]",
           "refId": "A"
         },
         {
-          "expr": "sum by (sys_id, reason) (label_replace(sum by (pod, reason) (increase(tcp_bridge_inbound_responses_total{job=~\"$job\", pod=~\"$pod\", reason!=\"\"}[$__rate_interval])), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\"))",
-          "legendFormat": "{{sys_id}} [RSP] {{reason}}",
+          "expr": "sum by (reason) (increase(tcp_bridge_inbound_responses_total{job=~\"$job\", pod=~\"$pod\", reason!=\"\"}[$__rate_interval]))",
+          "legendFormat": "[RSP] {{reason}}",
           "refId": "B"
         },
         {
-          "expr": "sum by (sys_id) (label_replace(sum by (pod) (increase(tcp_bridge_inbound_responses_total{job=~\"$job\", pod=~\"$pod\", reason=\"\"}[$__rate_interval])), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\"))",
-          "legendFormat": "{{sys_id}} [RSP] unknown",
+          "expr": "sum(increase(tcp_bridge_inbound_responses_total{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval]))",
+          "legendFormat": "[RSP Total]",
           "refId": "C"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "short",
+          "decimals": 0,
           "custom": {
             "drawStyle": "line",
             "lineWidth": 1,
@@ -630,7 +631,7 @@
     {
       "id": 12,
       "type": "timeseries",
-      "title": "Outbound Request And Response Rate By Reason",
+      "title": "Outbound Request And Response Count By Reason",
       "description": "\uc6d0\uc2dc \uce74\uc6b4\ud130 \uae30\ubc18 \ucc98\ub9ac\ub7c9. reason\ubcc4 \uc751\ub2f5 \ubd84\ud3ec \ud655\uc778. ok=\uc815\uc0c1, queue_full=queue\ud3ec\ud654, unknown_subject=subject\ud574\uc11d\uc2e4\ud328, frame_serialize_failed=\uc9c1\ub82c\ud654\uc2e4\ud328, no_ready_connection=connection\ubd80\uc7ac, tcp_request_write_failed=TCP\uc804\uc1a1\uc2e4\ud328, tcp_response_timeout=TCP\uc751\ub2f5timeout, reply_publish_failed=NATS reply\uc2e4\ud328.",
       "gridPos": {
         "x": 12,
@@ -644,24 +645,25 @@
       },
       "targets": [
         {
-          "expr": "sum by (sys_id) (label_replace(sum by (pod) (increase(tcp_bridge_outbound_requests_total{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval])), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\"))",
-          "legendFormat": "{{sys_id}} [REQ]",
+          "expr": "sum(increase(tcp_bridge_outbound_requests_total{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval]))",
+          "legendFormat": "[REQ]",
           "refId": "A"
         },
         {
-          "expr": "sum by (sys_id, reason) (label_replace(sum by (pod, reason) (increase(tcp_bridge_outbound_responses_total{job=~\"$job\", pod=~\"$pod\", reason!=\"\"}[$__rate_interval])), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\"))",
-          "legendFormat": "{{sys_id}} [RSP] {{reason}}",
+          "expr": "sum by (reason) (increase(tcp_bridge_outbound_responses_total{job=~\"$job\", pod=~\"$pod\", reason!=\"\"}[$__rate_interval]))",
+          "legendFormat": "[RSP] {{reason}}",
           "refId": "B"
         },
         {
-          "expr": "sum by (sys_id) (label_replace(sum by (pod) (increase(tcp_bridge_outbound_responses_total{job=~\"$job\", pod=~\"$pod\", reason=\"\"}[$__rate_interval])), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\"))",
-          "legendFormat": "{{sys_id}} [RSP] unknown",
+          "expr": "sum(increase(tcp_bridge_outbound_responses_total{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval]))",
+          "legendFormat": "[RSP Total]",
           "refId": "C"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "short",
+          "decimals": 0,
           "custom": {
             "drawStyle": "line",
             "lineWidth": 1,
