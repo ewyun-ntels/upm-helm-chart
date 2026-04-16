@@ -8,248 +8,71 @@ metadata:
     app.kubernetes.io/name: tcp-bridge
 spec:
   groups:
-    # ========================================
-    # Connectivity Monitoring (주석 처리 - 사용 애매함)
-    # ========================================
-    # - name: tcp-bridge.connectivity.metrics
-    #   rules:
-    #     # Metrics 수집 불가 (critical)
-    #     - alert: TcpBridgeMetricsUnavailable
-    #       expr: absent(tcp_bridge_connection_state) or up{job="tcp-bridge"} == 0
-    #       for: 1m
-    #       labels:
-    #         severity: critical
-    #         environment: MetricAlert
-    #         service: tcp-bridge
-    #         instance: tcp-bridge:metrics
-    #       annotations:
-    #         errCode: "2101"
-    #         value: "{{ $value }}"
-    #         summary: tcp-bridge metrics 수집 불가
-    #         description: 최근 1분 동안 Prometheus에서 tcp-bridge metrics가 수집되지 않음. Pod 상태, ServiceMonitor, service port, scrape label 설정 확인 필요.
-
-    # - name: tcp-bridge.connectivity.state
-    #   rules:
-    #     # Connection READY 정상 (normal)
-    #     - alert: TcpBridgeConnectionReady
-    #       expr: tcp_bridge:ready_connection_state:max >= 2
-    #       for: 1m
-    #       labels:
-    #         severity: normal
-    #         environment: MetricAlert
-    #         service: "{{ $labels.sys_id }}"
-    #         instance: "{{ $labels.sys_id }}:{{ $labels.connection_id }}"
-    #       annotations:
-    #         errCode: "2200"
-    #         value: "state={{ $value }}"
-    #         summary: connection READY 상태 정상
-    #         description: "`{{ $labels.sys_id }}`의 `{{ $labels.connection_id }}` connection이 READY 상태입니다. (state={{ $value }})"
-
-    #     # Connection READY 상태 아님 (critical)
-    #     - alert: TcpBridgeConnectionNotReady
-    #       expr: tcp_bridge:ready_connection_state:max < 2
-    #       for: 1m
-    #       labels:
-    #         severity: critical
-    #         environment: MetricAlert
-    #         service: "{{ $labels.sys_id }}"
-    #         instance: "{{ $labels.sys_id }}:{{ $labels.connection_id }}"
-    #       annotations:
-    #         errCode: "2201"
-    #         value: "state={{ $value }}"
-    #         summary: connection READY 상태 아님
-    #         description: "`{{ $labels.sys_id }}`의 `{{ $labels.connection_id }}` connection이 READY 상태가 아님 (state={{ $value }}). bridge 연결 상태와 failover 동작 확인 필요."
-
-    # ========================================
-    # Inbound Traffic Quality Monitoring
-    # ========================================
-    - name: tcp-bridge.inbound.communication
+    - name: tcp-bridge.connectivity
       rules:
-        # 소통률 정상 (normal)
-        - alert: TcpBridgeInboundCommunicationOk
-          expr: tcp_bridge:inbound_communication_rate:2m >= 0.95
-          for: 1m
-          labels:
-            severity: normal
-            environment: MetricAlert
-            service: "{{ $labels.sys_id }}"
-            instance: "{{ $labels.sys_id }}:inbound:communication"
-          annotations:
-            errCode: "3100"
-            value: "{{ $value | humanizePercentage }}"
-            summary: inbound 소통률 정상
-            description: "`{{ $labels.sys_id }}` inbound 성공 응답 비율이 정상입니다. ({{ $value | humanizePercentage }})"
-
-        # 소통률 이상 (critical)
-        - alert: TcpBridgeInboundCommunicationFailure
-          expr: tcp_bridge:inbound_communication_rate:2m < 0.95
+        - alert: TcpBridgeMetricsUnavailable
+          expr: absent(tcp_bridge_connection_state)
           for: 1m
           labels:
             severity: critical
             environment: MetricAlert
-            service: "{{ $labels.sys_id }}"
-            instance: "{{ $labels.sys_id }}:inbound:communication"
+            service: tcp-bridge
+            resource: tcp-bridge
+            exported_instance: tcp-bridge:metrics
           annotations:
-            errCode: "3101"
-            value: "{{ $value | humanizePercentage }}"
-            summary: inbound 소통률 저하
-            description: "`{{ $labels.sys_id }}` inbound 성공 응답 비율이 95% 미만입니다. ({{ $value | humanizePercentage }}) request 대비 success response 비율이 낮음. NATS 또는 downstream 서비스 상태 확인 필요."
+            errCode: "2001"
+            summary: tcp-bridge metrics 수집 불가
+            description: 최근 1분 동안 Prometheus에서 `tcp_bridge_connection_state` 메트릭이 전혀 수집되지 않음. `absent()` 기반 알림이라 connection/pod 라벨은 제공할 수 없으며, tcp-bridge 전체 scrape 이상으로 해석해야 함. Pod 상태, ServiceMonitor, service port, scrape label 설정 확인 필요.
 
-    - name: tcp-bridge.inbound.errors
-      rules:
-        # 에러율 정상 (normal: 에러율 < 1%)
-        - alert: TcpBridgeInboundNoError
-          expr: tcp_bridge:inbound_error_rate:2m < 0.01
-          for: 1m
-          labels:
-            severity: normal
-            environment: MetricAlert
-            service: "{{ $labels.sys_id }}"
-            instance: "{{ $labels.sys_id }}:inbound:errors"
-          annotations:
-            errCode: "3200"
-            value: "{{ $value | humanizePercentage }}"
-            summary: inbound 에러율 정상
-            description: "`{{ $labels.sys_id }}` inbound 에러율이 정상입니다. ({{ $value | humanizePercentage }})"
-
-        # 에러율 낮음 (minor: 1% <= 에러율 < 3%)
-        - alert: TcpBridgeInboundLowErrorRate
-          expr: tcp_bridge:inbound_error_rate:2m >= 0.01 and tcp_bridge:inbound_error_rate:2m < 0.03
-          for: 1m
-          labels:
-            severity: minor
-            environment: MetricAlert
-            service: "{{ $labels.sys_id }}"
-            instance: "{{ $labels.sys_id }}:inbound:errors"
-          annotations:
-            errCode: "3201"
-            value: "{{ $value | humanizePercentage }}"
-            summary: inbound 에러율 낮음
-            description: "`{{ $labels.sys_id }}` inbound 에러율이 1% 이상입니다. ({{ $value | humanizePercentage }}) error/timeout/dropped 발생 비율 모니터링 필요."
-
-        # 에러율 증가 (major: 3% <= 에러율 < 5%)
-        - alert: TcpBridgeInboundModerateErrorRate
-          expr: tcp_bridge:inbound_error_rate:2m >= 0.03 and tcp_bridge:inbound_error_rate:2m < 0.05
-          for: 1m
-          labels:
-            severity: major
-            environment: MetricAlert
-            service: "{{ $labels.sys_id }}"
-            instance: "{{ $labels.sys_id }}:inbound:errors"
-          annotations:
-            errCode: "3202"
-            value: "{{ $value | humanizePercentage }}"
-            summary: inbound 에러율 증가
-            description: "`{{ $labels.sys_id }}` inbound 에러율이 3% 이상입니다. ({{ $value | humanizePercentage }}) NATS timeout 또는 downstream 서비스 오류 확인 필요."
-
-        # 에러율 심각 (critical: 에러율 >= 5%)
-        - alert: TcpBridgeInboundHighErrorRate
-          expr: tcp_bridge:inbound_error_rate:2m >= 0.05
+        - alert: TcpBridgeConnectionNotReady
+          expr: tcp_bridge:ready_connection_state:max < 2
           for: 1m
           labels:
             severity: critical
             environment: MetricAlert
-            service: "{{ $labels.sys_id }}"
-            instance: "{{ $labels.sys_id }}:inbound:errors"
+            service: "{sys_id}"
+            exported_instance: "{sys_id}:{connection_id}"
           annotations:
-            errCode: "3203"
-            value: "{{ $value | humanizePercentage }}"
-            summary: inbound 에러율 심각
-            description: "`{{ $labels.sys_id }}` inbound 에러율이 5% 이상입니다. ({{ $value | humanizePercentage }}) 즉시 NATS, worker queue, downstream 서비스 상태 확인 필요."
+            errCode: "2002"
+            summary: connection READY 상태 아님
+            description: 지난 2분 동안 `{{ $labels.sys_id }}`의 `{{ $labels.connection_id }}` connection이 READY 상태가 아님. bridge 연결 상태와 failover 동작 확인 필요.
 
-    # ========================================
-    # Outbound Traffic Quality Monitoring
-    # ========================================
-    - name: tcp-bridge.outbound.communication
+    - name: tcp-bridge.inbound
       rules:
-        # 소통률 정상 (normal)
-        - alert: TcpBridgeOutboundCommunicationOk
-          expr: tcp_bridge:outbound_communication_rate:2m >= 0.95
-          for: 1m
-          labels:
-            severity: normal
-            environment: MetricAlert
-            service: "{{ $labels.sys_id }}"
-            instance: "{{ $labels.sys_id }}:outbound:communication"
-          annotations:
-            errCode: "4100"
-            value: "{{ $value | humanizePercentage }}"
-            summary: outbound 소통률 정상
-            description: "`{{ $labels.sys_id }}` outbound 성공 응답 비율이 정상입니다. ({{ $value | humanizePercentage }})"
-
-        # 소통률 이상 (critical)
-        - alert: TcpBridgeOutboundCommunicationFailure
-          expr: tcp_bridge:outbound_communication_rate:2m < 0.95
+        - alert: TcpBridgeInboundErrorRatioHigh
+          expr: |
+            (
+              (tcp_bridge:inbound_error_ratio:2m >= 0.10)
+              and
+              (tcp_bridge:inbound_outcomes_total:increase2m >= 5)
+            )
           for: 1m
           labels:
             severity: critical
             environment: MetricAlert
-            service: "{{ $labels.sys_id }}"
-            instance: "{{ $labels.sys_id }}:outbound:communication"
+            service: "{sys_id}"
+            exported_instance: "{sys_id}:{connection_id}"
           annotations:
-            errCode: "4101"
-            value: "{{ $value | humanizePercentage }}"
-            summary: outbound 소통률 저하
-            description: "`{{ $labels.sys_id }}` outbound 성공 응답 비율이 95% 미만입니다. ({{ $value | humanizePercentage }}) request 대비 success response 비율이 낮음. TCP peer 연결 상태 또는 응답 지연 확인 필요."
+            errCode: "3001"
+            summary: inbound error ratio 심각
+            description: 최근 2분 동안 `{{ $labels.sys_id }}`의 `{{ $labels.connection_id }}` connection에서 완료된 inbound 요청 5건 이상 조건으로 error ratio 10% 이상이 1분 이상 유지됨.
 
-    - name: tcp-bridge.outbound.errors
+    - name: tcp-bridge.outbound
       rules:
-        # 에러율 정상 (normal: 에러율 < 1%)
-        - alert: TcpBridgeOutboundNoError
-          expr: tcp_bridge:outbound_error_rate:2m < 0.01
-          for: 1m
-          labels:
-            severity: normal
-            environment: MetricAlert
-            service: "{{ $labels.sys_id }}"
-            instance: "{{ $labels.sys_id }}:outbound:errors"
-          annotations:
-            errCode: "4200"
-            value: "{{ $value | humanizePercentage }}"
-            summary: outbound 에러율 정상
-            description: "`{{ $labels.sys_id }}` outbound 에러율이 정상입니다. ({{ $value | humanizePercentage }})"
-
-        # 에러율 낮음 (minor: 1% <= 에러율 < 3%)
-        - alert: TcpBridgeOutboundLowErrorRate
-          expr: tcp_bridge:outbound_error_rate:2m >= 0.01 and tcp_bridge:outbound_error_rate:2m < 0.03
-          for: 1m
-          labels:
-            severity: minor
-            environment: MetricAlert
-            service: "{{ $labels.sys_id }}"
-            instance: "{{ $labels.sys_id }}:outbound:errors"
-          annotations:
-            errCode: "4201"
-            value: "{{ $value | humanizePercentage }}"
-            summary: outbound 에러율 낮음
-            description: "`{{ $labels.sys_id }}` outbound 에러율이 1% 이상입니다. ({{ $value | humanizePercentage }}) error/timeout/dropped 발생 비율 모니터링 필요."
-
-        # 에러율 증가 (major: 3% <= 에러율 < 5%)
-        - alert: TcpBridgeOutboundModerateErrorRate
-          expr: tcp_bridge:outbound_error_rate:2m >= 0.03 and tcp_bridge:outbound_error_rate:2m < 0.05
-          for: 1m
-          labels:
-            severity: major
-            environment: MetricAlert
-            service: "{{ $labels.sys_id }}"
-            instance: "{{ $labels.sys_id }}:outbound:errors"
-          annotations:
-            errCode: "4202"
-            value: "{{ $value | humanizePercentage }}"
-            summary: outbound 에러율 증가
-            description: "`{{ $labels.sys_id }}` outbound 에러율이 3% 이상입니다. ({{ $value | humanizePercentage }}) TCP peer 응답 지연 또는 connection_state 확인 필요."
-
-        # 에러율 심각 (critical: 에러율 >= 5%)
-        - alert: TcpBridgeOutboundHighErrorRate
-          expr: tcp_bridge:outbound_error_rate:2m >= 0.05
+        - alert: TcpBridgeOutboundErrorRatioHigh
+          expr: |
+            (
+              (tcp_bridge:outbound_error_ratio:2m >= 0.10)
+              and
+              (tcp_bridge:outbound_outcomes_total:increase2m >= 5)
+            )
           for: 1m
           labels:
             severity: critical
             environment: MetricAlert
-            service: "{{ $labels.sys_id }}"
-            instance: "{{ $labels.sys_id }}:outbound:errors"
+            service: "{sys_id}"
+            exported_instance: "{sys_id}:{connection_id}"
           annotations:
-            errCode: "4203"
-            value: "{{ $value | humanizePercentage }}"
-            summary: outbound 에러율 심각
-            description: "`{{ $labels.sys_id }}` outbound 에러율이 5% 이상입니다. ({{ $value | humanizePercentage }}) 즉시 TCP 연결 상태, retry/priority failover 동작 확인 필요."
+            errCode: "4001"
+            summary: outbound error ratio 심각
+            description: 최근 2분 동안 `{{ $labels.sys_id }}`의 `{{ $labels.connection_id }}` connection에서 완료된 outbound 요청 5건 이상 조건으로 error ratio 10% 이상이 1분 이상 유지됨.

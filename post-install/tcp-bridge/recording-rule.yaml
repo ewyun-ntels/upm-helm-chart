@@ -21,77 +21,41 @@ spec:
     - name: tcp-bridge.recording.inbound
       interval: 30s
       rules:
-        # 소통률: 최근 2분간 전체 요청 대비 성공 응답 비율 (0~1, 정상이면 ~1.0)
-        - record: tcp_bridge:inbound_communication_rate:2m
+        - record: tcp_bridge:inbound_outcomes_total:increase2m
+          expr: |
+            label_replace(
+              sum by (job, namespace, pod, connection_id) (increase(tcp_bridge_inbound_outcomes_total[2m])),
+              "sys_id", "$1", "pod", ".*(tcp-bridge-[0-9]+).*"
+            )
+
+        - record: tcp_bridge:inbound_error_ratio:2m
           expr: |
             label_replace(
               (
-                sum by (job, namespace, pod) (increase(tcp_bridge_inbound_responses_total{status="success"}[2m]))
+                sum by (job, namespace, pod, connection_id) (increase(tcp_bridge_inbound_outcomes_total{status=~"error|timeout|dropped"}[2m]))
                 /
-                clamp_min(sum by (job, namespace, pod) (increase(tcp_bridge_inbound_requests_total[2m])), 1)
+                clamp_min(sum by (job, namespace, pod, connection_id) (increase(tcp_bridge_inbound_outcomes_total[2m])), 1)
               ),
-              "sys_id", "$1", "pod", ".*(tcp-bridge-[0-9]+).*"
-            )
-            and on (job, namespace, pod)
-            sum by (job, namespace, pod) (increase(tcp_bridge_inbound_requests_total[2m])) > 0
-
-        # 에러율: 최근 2분간 전체 응답 대비 에러 응답 비율 (0~1, 정상이면 ~0)
-        - record: tcp_bridge:inbound_error_rate:2m
-          expr: |
-            label_replace(
-              (
-                sum by (job, namespace, pod) (increase(tcp_bridge_inbound_responses_total{status=~"error|timeout|dropped"}[2m]))
-                /
-                clamp_min(sum by (job, namespace, pod) (increase(tcp_bridge_inbound_responses_total[2m])), 1)
-              ),
-              "sys_id", "$1", "pod", ".*(tcp-bridge-[0-9]+).*"
-            )
-            and on (job, namespace, pod)
-            sum by (job, namespace, pod) (increase(tcp_bridge_inbound_responses_total[2m])) > 0
-
-        # (기존) 에러 발생 건수 - 레거시 호환용
-        - record: tcp_bridge:inbound_error_count:2m
-          expr: |
-            label_replace(
-              sum by (job, namespace, pod) (increase(tcp_bridge_inbound_responses_total{status=~"error|timeout|dropped"}[2m])),
               "sys_id", "$1", "pod", ".*(tcp-bridge-[0-9]+).*"
             )
 
     - name: tcp-bridge.recording.outbound
       interval: 30s
       rules:
-        # 소통률: 최근 2분간 전체 요청 대비 성공 응답 비율 (0~1, 정상이면 ~1.0)
-        - record: tcp_bridge:outbound_communication_rate:2m
+        - record: tcp_bridge:outbound_outcomes_total:increase2m
+          expr: |
+            label_replace(
+              sum by (job, namespace, pod, connection_id) (increase(tcp_bridge_outbound_outcomes_total[2m])),
+              "sys_id", "$1", "pod", ".*(tcp-bridge-[0-9]+).*"
+            )
+
+        - record: tcp_bridge:outbound_error_ratio:2m
           expr: |
             label_replace(
               (
-                sum by (job, namespace, pod) (increase(tcp_bridge_outbound_responses_total{status="success"}[2m]))
+                sum by (job, namespace, pod, connection_id) (increase(tcp_bridge_outbound_outcomes_total{status=~"error|timeout|dropped"}[2m]))
                 /
-                clamp_min(sum by (job, namespace, pod) (increase(tcp_bridge_outbound_requests_total[2m])), 1)
+                clamp_min(sum by (job, namespace, pod, connection_id) (increase(tcp_bridge_outbound_outcomes_total[2m])), 1)
               ),
-              "sys_id", "$1", "pod", ".*(tcp-bridge-[0-9]+).*"
-            )
-            and on (job, namespace, pod)
-            sum by (job, namespace, pod) (increase(tcp_bridge_outbound_requests_total[2m])) > 0
-
-        # 에러율: 최근 2분간 전체 응답 대비 에러 응답 비율 (0~1, 정상이면 ~0)
-        - record: tcp_bridge:outbound_error_rate:2m
-          expr: |
-            label_replace(
-              (
-                sum by (job, namespace, pod) (increase(tcp_bridge_outbound_responses_total{status=~"error|timeout|dropped"}[2m]))
-                /
-                clamp_min(sum by (job, namespace, pod) (increase(tcp_bridge_outbound_responses_total[2m])), 1)
-              ),
-              "sys_id", "$1", "pod", ".*(tcp-bridge-[0-9]+).*"
-            )
-            and on (job, namespace, pod)
-            sum by (job, namespace, pod) (increase(tcp_bridge_outbound_responses_total[2m])) > 0
-
-        # (기존) 에러 발생 건수 - 레거시 호환용
-        - record: tcp_bridge:outbound_error_count:2m
-          expr: |
-            label_replace(
-              sum by (job, namespace, pod) (increase(tcp_bridge_outbound_responses_total{status=~"error|timeout|dropped"}[2m])),
               "sys_id", "$1", "pod", ".*(tcp-bridge-[0-9]+).*"
             )
