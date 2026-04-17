@@ -100,7 +100,7 @@
       "id": 2,
       "type": "bargauge",
       "title": "Inbound Error Ratio 2m",
-      "description": "recording-rule \uae30\uc900 \ud604\uc7ac inbound \uc644\ub8cc \uc694\uccad \uc911 \uc2e4\ud328 \ube44\uc728. alert \uc784\uacc4\uac12\uc740 10% \uc774\uc0c1.",
+      "description": "\ucd5c\uadfc 2\ubd84 \ub3d9\uc548 \ucc98\ub9ac\ub41c inbound outcome \uc911 \uc2e4\ud328(error, timeout, dropped) \ube44\uc728\uc785\ub2c8\ub2e4. \uc644\ub8cc \uac74\uc218\uac00 5\uac74 \uc774\uc0c1\uc77c \ub54c 10% \uc774\uc0c1 \uc0c1\ud0dc\uac00 1\ubd84 \uc774\uc0c1 \uc9c0\uc18d\ub418\uba74 alert\uac00 \ubc1c\uc0dd\ud569\ub2c8\ub2e4.",
       "gridPos": {
         "x": 0,
         "y": 7,
@@ -158,7 +158,7 @@
       "id": 3,
       "type": "bargauge",
       "title": "Inbound Outcomes Total 2m",
-      "description": "recording-rule \uae30\uc900 \ucd5c\uadfc 2\ubd84 \ub3d9\uc548 \uc644\ub8cc\ub41c inbound \uc694\uccad \uc218. alert \ud45c\ubcf8 \uc218 \uc870\uac74\uc740 5\uac74 \uc774\uc0c1.",
+      "description": "\ucd5c\uadfc 2\ubd84 \ub3d9\uc548 \uc9d1\uacc4\ub41c inbound outcome \ucd1d\uac74\uc218\uc785\ub2c8\ub2e4. inbound error ratio\ub97c \ud310\ub2e8\ud558\ub294 \ud45c\ubcf8 \uc218\ub85c \uc0ac\uc6a9\ub418\uba70, 5\uac74 \uc774\uc0c1\uc77c \ub54c alert \uc870\uac74\uc744 \ubcf4\ub294 \uae30\uc900\uc774 \ub429\ub2c8\ub2e4.",
       "gridPos": {
         "x": 6,
         "y": 7,
@@ -216,7 +216,7 @@
       "id": 4,
       "type": "bargauge",
       "title": "Outbound Error Ratio 2m",
-      "description": "recording-rule \uae30\uc900 \ud604\uc7ac outbound \uc644\ub8cc \uc694\uccad \uc911 \uc2e4\ud328 \ube44\uc728. alert \uc784\uacc4\uac12\uc740 10% \uc774\uc0c1.",
+      "description": "\ucd5c\uadfc 2\ubd84 \ub3d9\uc548 \ucc98\ub9ac\ub41c outbound outcome \uc911 \uc2e4\ud328(error, timeout, dropped) \ube44\uc728\uc785\ub2c8\ub2e4. \uc644\ub8cc \uac74\uc218\uac00 5\uac74 \uc774\uc0c1\uc77c \ub54c 10% \uc774\uc0c1 \uc0c1\ud0dc\uac00 1\ubd84 \uc774\uc0c1 \uc9c0\uc18d\ub418\uba74 alert\uac00 \ubc1c\uc0dd\ud569\ub2c8\ub2e4.",
       "gridPos": {
         "x": 12,
         "y": 7,
@@ -274,7 +274,7 @@
       "id": 5,
       "type": "bargauge",
       "title": "Outbound Outcomes Total 2m",
-      "description": "recording-rule \uae30\uc900 \ucd5c\uadfc 2\ubd84 \ub3d9\uc548 \uc644\ub8cc\ub41c outbound \uc694\uccad \uc218. alert \ud45c\ubcf8 \uc218 \uc870\uac74\uc740 5\uac74 \uc774\uc0c1.",
+      "description": "\ucd5c\uadfc 2\ubd84 \ub3d9\uc548 \uc9d1\uacc4\ub41c outbound outcome \ucd1d\uac74\uc218\uc785\ub2c8\ub2e4. outbound error ratio\ub97c \ud310\ub2e8\ud558\ub294 \ud45c\ubcf8 \uc218\ub85c \uc0ac\uc6a9\ub418\uba70, 5\uac74 \uc774\uc0c1\uc77c \ub54c alert \uc870\uac74\uc744 \ubcf4\ub294 \uae30\uc900\uc774 \ub429\ub2c8\ub2e4.",
       "gridPos": {
         "x": 18,
         "y": 7,
@@ -332,7 +332,7 @@
       "id": 6,
       "type": "timeseries",
       "title": "Inbound Completion And Response Sent Rate",
-      "description": "README \uae30\uc900 `requests_total` \ub300\ube44 `outcomes_total`, `responses_sent_total` \ube44\uc728\uc744 \ubd84\ub9ac\ud574 \ucd94\uc774 \ud655\uc778.",
+      "description": "\ucd5c\uadfc 2\ubd84 \ub3d9\uc548 \uc99d\uac00\ud55c inbound requests_total \ub300\ube44 outcomes_total \ube44\uc728\uacfc inbound_responses_sent_total \ube44\uc728\uc744 \uac01\uac01 \ud45c\uc2dc. \ucd5c\uc885 \ucc98\ub9ac \uc644\ub8cc\uc728\uacfc \uc678\ubd80 TCP \uc751\ub2f5 \uc1a1\uc2e0\uc728\uc744 \ubd84\ub9ac\ud574 \ucd94\uc774\ub97c \ud655\uc778.",
       "gridPos": {
         "x": 0,
         "y": 13,
@@ -441,7 +441,7 @@
       "id": 7,
       "type": "timeseries",
       "title": "Outbound Completion And Response Sent Rate",
-      "description": "README \uae30\uc900 `requests_total` \ub300\ube44 `outcomes_total`, `responses_sent_total` \ube44\uc728\uc744 \ubd84\ub9ac\ud574 \ucd94\uc774 \ud655\uc778.",
+      "description": "\ucd5c\uadfc 2\ubd84 \ub3d9\uc548 \uc99d\uac00\ud55c outbound requests_total \ub300\ube44 outcomes_total \ube44\uc728\uacfc outbound_responses_sent_total \ube44\uc728\uc744 \uac01\uac01 \ud45c\uc2dc. \ucd5c\uc885 \ucc98\ub9ac \uc644\ub8cc\uc728\uacfc NATS reply \uc1a1\uc2e0\uc728\uc744 \ubd84\ub9ac\ud574 \ucd94\uc774\ub97c \ud655\uc778.",
       "gridPos": {
         "x": 12,
         "y": 13,
@@ -562,7 +562,7 @@
       "id": 11,
       "type": "timeseries",
       "title": "Inbound Request Outcome And Response Sent Count",
-      "description": "README \uae30\uc900 요청 진입량, 최종 처리 완료량(outcome), 외부 TCP 응답 송신 성공량(response sent)을 분리해 확인.",
+      "description": "\ucd5c\uadfc $__rate_interval \ub3d9\uc548 \uc99d\uac00\ud55c inbound requests, outcomes, responses sent \uac74\uc218\ub97c \uac01\uac01 \ud45c\uc2dc. \uc694\uccad \uc9c4\uc785\ubd80\ud130 \ucc98\ub9ac \uc644\ub8cc, \uc678\ubd80 TCP \uc751\ub2f5 \uc1a1\uc2e0\uae4c\uc9c0 \ub2e8\uacc4\ubcc4 \ucc98\ub9ac\ub7c9 \ucc28\uc774\ub97c \ud655\uc778.",
       "gridPos": {
         "x": 0,
         "y": 21,
@@ -617,7 +617,7 @@
       "id": 12,
       "type": "timeseries",
       "title": "Outbound Request Outcome And Response Sent Count",
-      "description": "README \uae30\uc900 요청 진입량, 최종 처리 완료량(outcome), NATS reply 송신 성공량(response sent)을 분리해 확인.",
+      "description": "\ucd5c\uadfc $__rate_interval \ub3d9\uc548 \uc99d\uac00\ud55c outbound requests, outcomes, responses sent \uac74\uc218\ub97c \uac01\uac01 \ud45c\uc2dc. \uc694\uccad \uc9c4\uc785\ubd80\ud130 \ucc98\ub9ac \uc644\ub8cc, NATS reply \uc1a1\uc2e0\uae4c\uc9c0 \ub2e8\uacc4\ubcc4 \ucc98\ub9ac\ub7c9 \ucc28\uc774\ub97c \ud655\uc778.",
       "gridPos": {
         "x": 12,
         "y": 21,
@@ -672,7 +672,7 @@
       "id": 13,
       "type": "timeseries",
       "title": "Inbound Outcomes Total 2m Trend",
-      "description": "recording-rule \uc785\ub825 \uc9c0\ud45c. \ucd5c\uadfc 2\ubd84 \uae30\uc900 inbound \uc644\ub8cc \uc694\uccad \uc218 \ucd94\uc774.",
+      "description": "\ucd5c\uadfc 2\ubd84 \uae30\uc900 inbound outcome \ucd1d\uac74\uc218 \ucd94\uc774\uc785\ub2c8\ub2e4. \uc2dc\uc2a4\ud15c\ubcc4 \ucc98\ub9ac \ub7c9 \ubcc0\ud654\ub97c \ube60\ub974\uac8c \ud655\uc778\ud560 \uc218 \uc788\uc2b5\ub2c8\ub2e4.",
       "gridPos": {
         "x": 0,
         "y": 28,
@@ -717,7 +717,7 @@
       "id": 14,
       "type": "timeseries",
       "title": "Outbound Outcomes Total 2m Trend",
-      "description": "recording-rule \uc785\ub825 \uc9c0\ud45c. \ucd5c\uadfc 2\ubd84 \uae30\uc900 outbound \uc644\ub8cc \uc694\uccad \uc218 \ucd94\uc774.",
+      "description": "\ucd5c\uadfc 2\ubd84 \uae30\uc900 outbound outcome \ucd1d\uac74\uc218 \ucd94\uc774\uc785\ub2c8\ub2e4. \uc2dc\uc2a4\ud15c\ubcc4 \ucc98\ub9ac \ub7c9 \ubcc0\ud654\ub97c \ube60\ub974\uac8c \ud655\uc778\ud560 \uc218 \uc788\uc2b5\ub2c8\ub2e4.",
       "gridPos": {
         "x": 12,
         "y": 28,
@@ -774,7 +774,7 @@
       "id": 21,
       "type": "stat",
       "title": "Ready Connection State",
-      "description": "recording-rule \uae30\uc900 connection \uc0c1\ud0dc. 2=Ready, 1=Connecting, 0=Disconnected.",
+      "description": "\ud604\uc7ac connection \uc0c1\ud0dc\ub97c \ud45c\uc2dc\ud569\ub2c8\ub2e4. 2\ub294 Ready, 1\uc740 Connecting, 0\uc740 Disconnected\ub97c \uc758\ubbf8\ud569\ub2c8\ub2e4.",
       "gridPos": {
         "x": 0,
         "y": 1,
