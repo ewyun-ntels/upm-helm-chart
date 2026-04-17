@@ -24,7 +24,7 @@ spec:
         - record: tcp_bridge:inbound_outcomes_total:increase2m
           expr: |
             label_replace(
-              sum by (job, namespace, pod) (increase(tcp_bridge_inbound_outcomes_total{pod=~".*tcp-bridge-[0-9]+.*"}[2m])),
+              round(sum by (job, namespace, pod) (increase(tcp_bridge_inbound_outcomes_total{pod=~".*tcp-bridge-[0-9]+.*"}[2m]))),
               "sys_id", "$1", "pod", ".*(tcp-bridge-[0-9]+).*"
             )
 
@@ -45,7 +45,7 @@ spec:
         - record: tcp_bridge:outbound_outcomes_total:increase2m
           expr: |
             label_replace(
-              sum by (job, namespace, pod) (increase(tcp_bridge_outbound_outcomes_total{pod=~".*tcp-bridge-[0-9]+.*"}[2m])),
+              round(sum by (job, namespace, pod) (increase(tcp_bridge_outbound_outcomes_total{pod=~".*tcp-bridge-[0-9]+.*"}[2m]))),
               "sys_id", "$1", "pod", ".*(tcp-bridge-[0-9]+).*"
             )
 

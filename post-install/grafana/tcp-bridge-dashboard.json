@@ -190,6 +190,7 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
+          "decimals": 0,
           "min": 0,
           "max": 10,
           "thresholds": {
@@ -306,6 +307,7 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
+          "decimals": 0,
           "min": 0,
           "max": 10,
           "thresholds": {
@@ -595,9 +597,9 @@
           "unit": "short",
           "decimals": 0,
           "custom": {
-            "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 8
+            "drawStyle": "bars",
+            "lineWidth": 0,
+            "fillOpacity": 70
           }
         }
       },
@@ -650,9 +652,9 @@
           "unit": "short",
           "decimals": 0,
           "custom": {
-            "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 8
+            "drawStyle": "bars",
+            "lineWidth": 0,
+            "fillOpacity": 70
           }
         }
       },
@@ -693,10 +695,11 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
+          "decimals": 0,
           "min": 0,
           "custom": {
             "drawStyle": "bars",
-            "lineWidth": 1,
+            "lineWidth": 0,
             "fillOpacity": 70
           }
         }
@@ -738,10 +741,11 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
+          "decimals": 0,
           "min": 0,
           "custom": {
             "drawStyle": "bars",
-            "lineWidth": 1,
+            "lineWidth": 0,
             "fillOpacity": 70
           }
         }
@@ -1111,10 +1115,11 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
+          "decimals": 0,
           "custom": {
-            "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 8
+            "drawStyle": "bars",
+            "lineWidth": 0,
+            "fillOpacity": 70
           }
         }
       },
@@ -1156,10 +1161,11 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
+          "decimals": 0,
           "custom": {
-            "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 8
+            "drawStyle": "bars",
+            "lineWidth": 0,
+            "fillOpacity": 70
           }
         }
       },
@@ -1201,10 +1207,11 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
+          "decimals": 0,
           "custom": {
-            "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 8
+            "drawStyle": "bars",
+            "lineWidth": 0,
+            "fillOpacity": 70
           }
         }
       },
@@ -1246,10 +1253,11 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
+          "decimals": 0,
           "custom": {
-            "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 8
+            "drawStyle": "bars",
+            "lineWidth": 0,
+            "fillOpacity": 70
           }
         }
       },
