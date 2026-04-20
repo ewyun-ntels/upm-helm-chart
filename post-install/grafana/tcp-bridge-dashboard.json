@@ -651,6 +651,428 @@
           ]
         }
       }
+    },
+    {
+      "id": 40,
+      "type": "row",
+      "title": "Aggregated By Service (All Pods)",
+      "gridPos": {
+        "x": 0,
+        "y": 29,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false
+    },
+    {
+      "id": 33,
+      "type": "timeseries",
+      "title": "Inbound Completion And Response Sent Rate (Total)",
+      "description": "\uc804\uccb4 tcp-bridge pod\ub4e4\uc758 \ud569\uc0b0 - \ucd5c\uadfc 2\ubd84 \ub3d9\uc548 \uc99d\uac00\ud55c inbound requests_total \ub300\ube44 outcomes_total \ube44\uc728\uacfc inbound_responses_sent_total \ube44\uc728\uc744 \uac01\uac01 \ud45c\uc2dc.",
+      "gridPos": {
+        "x": 0,
+        "y": 30,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "(sum(increase(tcp_bridge_inbound_outcomes_total{job=~\"$job\", pod=~\"$pod\"}[2m]))) / clamp_min(sum(increase(tcp_bridge_inbound_requests_total{job=~\"$job\", pod=~\"$pod\"}[2m])), 1)",
+          "legendFormat": "tcp-bridge outcome completion",
+          "refId": "A"
+        },
+        {
+          "expr": "(sum(increase(tcp_bridge_inbound_responses_sent_total{job=~\"$job\", pod=~\"$pod\"}[2m]))) / clamp_min(sum(increase(tcp_bridge_inbound_requests_total{job=~\"$job\", pod=~\"$pod\"}[2m])), 1)",
+          "legendFormat": "tcp-bridge response sent",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*response sent"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 0.95
+                    },
+                    {
+                      "color": "green",
+                      "value": 0.99
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*outcome completion"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 0.95
+                    },
+                    {
+                      "color": "green",
+                      "value": 0.99
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "mean"
+          ]
+        }
+      }
+    },
+    {
+      "id": 34,
+      "type": "timeseries",
+      "title": "Outbound Completion And Response Sent Rate (Total)",
+      "description": "\uc804\uccb4 tcp-bridge pod\ub4e4\uc758 \ud569\uc0b0 - \ucd5c\uadfc 2\ubd84 \ub3d9\uc548 \uc99d\uac00\ud55c outbound requests_total \ub300\ube44 outcomes_total \ube44\uc728\uacfc outbound_responses_sent_total \ube44\uc728\uc744 \uac01\uac01 \ud45c\uc2dc.",
+      "gridPos": {
+        "x": 12,
+        "y": 30,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "(sum(increase(tcp_bridge_outbound_outcomes_total{job=~\"$job\", pod=~\"$pod\"}[2m]))) / clamp_min(sum(increase(tcp_bridge_outbound_requests_total{job=~\"$job\", pod=~\"$pod\"}[2m])), 1)",
+          "legendFormat": "tcp-bridge outcome completion",
+          "refId": "A"
+        },
+        {
+          "expr": "(sum(increase(tcp_bridge_outbound_responses_sent_total{job=~\"$job\", pod=~\"$pod\"}[2m]))) / clamp_min(sum(increase(tcp_bridge_outbound_requests_total{job=~\"$job\", pod=~\"$pod\"}[2m])), 1)",
+          "legendFormat": "tcp-bridge response sent",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*response sent"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 0.95
+                    },
+                    {
+                      "color": "green",
+                      "value": 0.99
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*outcome completion"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 0.95
+                    },
+                    {
+                      "color": "green",
+                      "value": 0.99
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "mean"
+          ]
+        }
+      }
+    },
+    {
+      "id": 35,
+      "type": "timeseries",
+      "title": "Inbound Outcomes By Msg Type And Reason (Total)",
+      "description": "\uc804\uccb4 tcp-bridge pod\ub4e4\uc758 \ud569\uc0b0 - \ucd5c\uadfc $__rate_interval \ub3d9\uc548 \uc99d\uac00\ud55c inbound outcomes_total\uc744 msg_type, reason\ubcc4\ub85c \ud569\uc0b0\ud574 \ud45c\uc2dc.",
+      "gridPos": {
+        "x": 0,
+        "y": 37,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "sum by (msg_type, reason) (increase(tcp_bridge_inbound_outcomes_total{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval]))",
+          "legendFormat": "{{msg_type}} / {{reason}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 0,
+            "fillOpacity": 70
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "mean"
+          ]
+        }
+      }
+    },
+    {
+      "id": 36,
+      "type": "timeseries",
+      "title": "Outbound Outcomes By Msg Type And Reason (Total)",
+      "description": "\uc804\uccb4 tcp-bridge pod\ub4e4\uc758 \ud569\uc0b0 - \ucd5c\uadfc $__rate_interval \ub3d9\uc548 \uc99d\uac00\ud55c outbound outcomes_total\uc744 msg_type, reason\ubcc4\ub85c \ud569\uc0b0\ud574 \ud45c\uc2dc.",
+      "gridPos": {
+        "x": 12,
+        "y": 37,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "sum by (msg_type, reason) (increase(tcp_bridge_outbound_outcomes_total{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval]))",
+          "legendFormat": "{{msg_type}} / {{reason}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 0,
+            "fillOpacity": 70
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "mean"
+          ]
+        }
+      }
+    },
+    {
+      "id": 37,
+      "type": "timeseries",
+      "title": "Inbound End-to-End Duration (Total)",
+      "description": "\uc804\uccb4 tcp-bridge pod\ub4e4\uc758 \ud569\uc0b0 - Histogram \uae30\ubc18 inbound end-to-end latency. \uc694\uccad \uc218\uc2e0\ubd80\ud130 \ucd5c\uc885 TCP \uc751\ub2f5 \ucc98\ub9ac\uae4c\uc9c0\uc758 p50/p95.",
+      "gridPos": {
+        "x": 0,
+        "y": 44,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum by (le, connection_id) (rate(tcp_bridge_inbound_end_to_end_duration_seconds_bucket{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval])))",
+          "legendFormat": "{{connection_id}} p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, connection_id) (rate(tcp_bridge_inbound_end_to_end_duration_seconds_bucket{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval])))",
+          "legendFormat": "{{connection_id}} p95",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 0,
+            "fillOpacity": 70
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "mean",
+            "max"
+          ]
+        }
+      }
+    },
+    {
+      "id": 38,
+      "type": "timeseries",
+      "title": "Outbound End-to-End Duration (Total)",
+      "description": "\uc804\uccb4 tcp-bridge pod\ub4e4\uc758 \ud569\uc0b0 - Histogram \uae30\ubc18 outbound end-to-end latency. \uc694\uccad \uc218\uc2e0\ubd80\ud130 \ucd5c\uc885 NATS reply \ubc1c\ud589\uae4c\uc9c0\uc758 p50/p95.",
+      "gridPos": {
+        "x": 12,
+        "y": 44,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum by (le, connection_id) (rate(tcp_bridge_outbound_end_to_end_duration_seconds_bucket{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval])))",
+          "legendFormat": "{{connection_id}} p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, connection_id) (rate(tcp_bridge_outbound_end_to_end_duration_seconds_bucket{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval])))",
+          "legendFormat": "{{connection_id}} p95",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 0,
+            "fillOpacity": 70
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "mean",
+            "max"
+          ]
+        }
+      }
     }
   ]
 }
