@@ -308,6 +308,8 @@ persistence:
 - 컨테이너는 root 권한으로 실행 (PV 경로 접근 보장)
 - SFTP 사용자 홈: `/home/<user>` (chroot)
 - SFTP 사용자 쓰기 디렉터리: `/home/<user>/data` (PVC subPath)
+- OpenSSH chroot 제약 때문에 `/home/<user>` 자체는 항상 `root:root` 이어야 하며, 실제 업로드/생성은 그 하위 디렉터리에서만 가능
+- 이 차트는 `accounts[].directories` 와 `accounts[].loginDirectory` 에 지정한 경로의 중간 디렉터리까지 사용자 UID/GID 소유로 맞춰서, 로그인 계정으로 폴더/파일 생성이 가능하도록 초기화함
 
 ### 🔄 데이터 영속성 보장
 

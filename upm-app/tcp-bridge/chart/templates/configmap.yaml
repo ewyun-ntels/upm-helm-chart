@@ -39,10 +39,15 @@ data:
         retry_attempts: {{ .Values.config.message_handler.outbound.retry_attempts }}
         worker_count: {{ .Values.config.message_handler.outbound.worker_count }}
         queue_size: {{ .Values.config.message_handler.outbound.queue_size }}
+        error_reply:
+          result_code: {{ .Values.config.message_handler.outbound.error_reply.result_code | quote }}
       inbound:
         timeout: {{ .Values.config.message_handler.inbound.timeout | quote }}
         worker_count: {{ .Values.config.message_handler.inbound.worker_count }}
         queue_size: {{ .Values.config.message_handler.inbound.queue_size }}
+
+    pg_response_formatter:
+      fle: {{ .Values.config.pg_response_formatter.fle | quote }}
 
     metrics:
       enabled: {{ .Values.config.metrics.enabled }}

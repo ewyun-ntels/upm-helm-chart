@@ -10,7 +10,7 @@ spec:
   groups:
     - name: tcp-bridge.connectivity
       rules:
-        - alert: PCConnectionState
+        - alert: PGConnectionState
           expr: tcp_bridge:ready_connection_state:max < 2
           for: 1m
           labels:
@@ -25,7 +25,7 @@ spec:
 
     - name: tcp-bridge.inbound
       rules:
-        - alert: PCInboundErrorRatio
+        - alert: PGInboundErrorRatio
           expr: |
             (
               (tcp_bridge:inbound_error_ratio:2m >= 0.10)
@@ -46,7 +46,7 @@ spec:
 
     - name: tcp-bridge.outbound
       rules:
-        - alert: PCOutboundErrorRatio
+        - alert: PGOutboundErrorRatio
           expr: |
             (
               (tcp_bridge:outbound_error_ratio:2m >= 0.10)

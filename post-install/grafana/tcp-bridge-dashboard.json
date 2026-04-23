@@ -501,7 +501,7 @@
       },
       "targets": [
         {
-          "expr": "max by (pod_group, connection_id) (label_replace((tcp_bridge_selected_connection{job=~\"$job\", pod=~\"$pod\"} == 1) and on (job, namespace, pod, connection_id) (tcp_bridge_connection_state{job=~\"$job\", pod=~\"$pod\"} > 0), \"pod_group\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\"))",
+          "expr": "max by (pod_group, connection_id) (label_replace((tcp_bridge_selected_connection == 1) and on (job, namespace, pod, connection_id) (tcp_bridge_connection_state > 0), \"pod_group\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\"))",
           "legendFormat": "{{pod_group}} / {{connection_id}}",
           "refId": "A"
         }

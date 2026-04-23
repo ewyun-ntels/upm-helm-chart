@@ -120,6 +120,9 @@ podAntiAffinity:
   # Use 'required' for hard constraint or 'preferred' for soft constraint
   type: required  # required or preferred
 
+formatterPgResponse:
+  resultCode: "FA2004"
+
 config:
   server:
     name: "tcp-bridge"
@@ -132,7 +135,7 @@ config:
       - host: "192.168.10.112"
         port: 10506
         priority: 0
-      - host: "192.168.15.142"
+      - host: "10.255.254.22"
         port: 10506
         priority: 1
     
@@ -155,19 +158,25 @@ config:
 
     message_type_routing:
       outbound:
-        "05":
-          subject: "tcp.subs.change"
-          response_msg_type: "06"
         "09":
           subject: "tcp.cellinfo.noti"
           response_msg_type: "0a"
+        "0b":
+          subject: "tcp.subs.sync"
+          response_msg_type: "0c"  
       inbound:
+        "05":
+          subject: "tcp.subs.chg"
+          response_msg_type: "06"
         "07":
           subject: "tcp.subs.info"
           response_msg_type: "08"
-        "0b":
-          subject: "tcp.subs.sync"
-          response_msg_type: "0c"
+        "0d":
+          subject: "tcp.subs.dvc"
+          response_msg_type: "0e"
+        "0f":
+          subject: "xxxxxxxxxxxxxxxxxxxx"
+          response_msg_type: "10"
 
   message_handler:
     outbound:
@@ -175,10 +184,15 @@ config:
       retry_attempts: 10
       worker_count: 20
       queue_size: 500
+      error_reply:
+        result_code: "FATB2004"
     inbound:
       timeout: "30s"
       worker_count: 20
       queue_size: 500
+
+  pg_response_formatter:
+    fle: "/app/formatter_pg_result.json"
 
   metrics:
     enabled: true

@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "tcp-bridge.fullname" . }}-formatter-pg-response
+  labels:
+    {{- include "tcp-bridge.labels" . | nindent 4 }}
+data:
+  formatter_pg_result.json: |
+    {
+      "payloadTemplate": {
+        "msg-type": "",
+        "code-type": "",
+        "sys-id": "",
+        "branch-name": "",
+        "tid": "",
+        "mdn": "",
+        "new-mdn": "",
+        "result-code": {{ .Values.formatterPgResponse.resultCode | quote }},
+        "subsList": [
+          {
+            "mdn": "",
+            "cell-list": []
+          }
+        ]
+      }
+    }

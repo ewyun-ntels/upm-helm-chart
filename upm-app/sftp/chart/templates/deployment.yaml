@@ -38,17 +38,43 @@ spec:
         - -c
         - |
           set -e
+          ensure_writable_tree() {
+            user_root="$1"
+            target_path="$2"
+            owner_uid="$3"
+            owner_gid="$4"
+
+            clean_path="${target_path#/}"
+            [ -n "$clean_path" ] || return 0
+
+            mkdir -p "$user_root/$clean_path"
+
+            current="$user_root"
+            remaining="$clean_path"
+            while [ -n "$remaining" ]; do
+              segment="${remaining%%/*}"
+              if [ "$segment" = "$remaining" ]; then
+                remaining=""
+              else
+                remaining="${remaining#*/}"
+              fi
+              [ -n "$segment" ] || continue
+              current="$current/$segment"
+              chown "$owner_uid:$owner_gid" "$current"
+              chmod 755 "$current"
+            done
+
+            chown -R "$owner_uid:$owner_gid" "$user_root/$clean_path"
+          }
           {{- range $account := .Values.accounts }}
           mkdir -p "/nfs-root/{{ $account.username }}"
           chown root:root "/nfs-root/{{ $account.username }}"
           chmod 755 "/nfs-root/{{ $account.username }}"
           {{- range $dir := $account.directories }}
-          mkdir -p "/nfs-root/{{ $account.username }}{{ $dir }}"
-          chown -R {{ $account.uid }}:{{ $account.gid }} "/nfs-root/{{ $account.username }}{{ $dir }}"
+          ensure_writable_tree "/nfs-root/{{ $account.username }}" "{{ $dir }}" "{{ $account.uid }}" "{{ $account.gid }}"
           {{- end }}
           {{- if $account.loginDirectory }}
-          mkdir -p "/nfs-root/{{ $account.username }}{{ $account.loginDirectory }}"
-          chown -R {{ $account.uid }}:{{ $account.gid }} "/nfs-root/{{ $account.username }}{{ $account.loginDirectory }}"
+          ensure_writable_tree "/nfs-root/{{ $account.username }}" "{{ $account.loginDirectory }}" "{{ $account.uid }}" "{{ $account.gid }}"
           {{- end }}
           {{- end }}
           {{- if .Values.hostKeys.enabled }}

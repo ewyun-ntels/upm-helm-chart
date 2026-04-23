@@ -67,6 +67,8 @@ hostKeys:
 # SFTP accounts to create.
 # Each account gets its own chroot at /home/<username> backed by NFS.
 # loginDirectory is the path shown inside that chroot after login.
+# Leave it empty to start at /, but / itself must stay root-owned for OpenSSH chroot
+# and is therefore not writable. Put uploads under one of the directories below.
 accounts:
   - username: upm_ems
     password: upm_ems

@@ -21,6 +21,7 @@ spec:
     metadata:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/formatter-pg-response: {{ include (print $.Template.BasePath "/formatter-pg-result-configmap.yaml") . | sha256sum }}
         {{- if .Values.multus.enabled }}
         k8s.v1.cni.cncf.io/networks: |
           [{
@@ -76,6 +77,10 @@ spec:
           mountPath: /app/config.yaml
           subPath: config.yaml
           readOnly: true
+        - name: formatter-pg-response
+          mountPath: {{ .Values.config.pg_response_formatter.fle | quote }}
+          subPath: formatter_pg_result.json
+          readOnly: true
         env:
         - name: POD_INDEX
           value: "0"
@@ -97,6 +102,9 @@ spec:
       - name: config
         configMap:
           name: {{ include "tcp-bridge.fullname" . }}-config
+      - name: formatter-pg-response
+        configMap:
+          name: {{ include "tcp-bridge.fullname" . }}-formatter-pg-response
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
