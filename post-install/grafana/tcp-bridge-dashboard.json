@@ -8,7 +8,7 @@
     "recording-rules"
   ],
   "schemaVersion": 38,
-  "version": 11,
+  "version": 12,
   "refresh": "30s",
   "time": {
     "from": "now-1h",
@@ -87,7 +87,7 @@
     {
       "id": 6,
       "type": "timeseries",
-      "title": "TCP 브릿지별 Inbound 소통률",
+      "title": "TCP 브릿지별 Inbound 처리완료율 / 응답송신율",
       "description": "\ucd5c\uadfc 2\ubd84 \ub3d9\uc548 \uc99d\uac00\ud55c inbound requests_total \ub300\ube44 outcomes_total \ube44\uc728\uacfc inbound_responses_sent_total \ube44\uc728\uc744 \uac01\uac01 \ud45c\uc2dc. \ucd5c\uc885 \ucc98\ub9ac \uc644\ub8cc\uc728\uacfc \uc678\ubd80 TCP \uc751\ub2f5 \uc1a1\uc2e0\uc728\uc744 \ubd84\ub9ac\ud574 \ucd94\uc774\ub97c \ud655\uc778.",
       "gridPos": {
         "x": 0,
@@ -102,12 +102,12 @@
       "targets": [
         {
           "expr": "((sum by (sys_id) (label_replace(increase(tcp_bridge_inbound_outcomes_total{job=~\"$job\", pod=~\"$pod\"}[2m]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\"))) / clamp_min(sum by (sys_id) (label_replace(increase(tcp_bridge_inbound_requests_total{job=~\"$job\", pod=~\"$pod\"}[2m]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\")), 1)) and on (sys_id) max by (sys_id) (tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"})",
-          "legendFormat": "{{sys_id}} Request",
+          "legendFormat": "{{sys_id}} 처리완료율",
           "refId": "A"
         },
         {
           "expr": "((sum by (sys_id) (label_replace(increase(tcp_bridge_inbound_responses_sent_total{job=~\"$job\", pod=~\"$pod\"}[2m]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\"))) / clamp_min(sum by (sys_id) (label_replace(increase(tcp_bridge_inbound_requests_total{job=~\"$job\", pod=~\"$pod\"}[2m]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\")), 1)) and on (sys_id) max by (sys_id) (tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"})",
-          "legendFormat": "{{sys_id}} Response",
+          "legendFormat": "{{sys_id}} 응답송신율",
           "refId": "B"
         }
       ],
@@ -126,7 +126,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": ".*Response"
+              "options": ".*응답송신율"
             },
             "properties": [
               {
@@ -154,7 +154,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": ".*Request"
+              "options": ".*처리완료율"
             },
             "properties": [
               {
@@ -196,7 +196,7 @@
     {
       "id": 7,
       "type": "timeseries",
-      "title": "TCP 브릿지별 Outbound 소통률",
+      "title": "TCP 브릿지별 Outbound 처리완료율 / 응답송신율",
       "description": "\ucd5c\uadfc 2\ubd84 \ub3d9\uc548 \uc99d\uac00\ud55c outbound requests_total \ub300\ube44 outcomes_total \ube44\uc728\uacfc outbound_responses_sent_total \ube44\uc728\uc744 \uac01\uac01 \ud45c\uc2dc. \ucd5c\uc885 \ucc98\ub9ac \uc644\ub8cc\uc728\uacfc NATS reply \uc1a1\uc2e0\uc728\uc744 \ubd84\ub9ac\ud574 \ucd94\uc774\ub97c \ud655\uc778.",
       "gridPos": {
         "x": 12,
@@ -211,12 +211,12 @@
       "targets": [
         {
           "expr": "((sum by (sys_id) (label_replace(increase(tcp_bridge_outbound_outcomes_total{job=~\"$job\", pod=~\"$pod\"}[2m]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\"))) / clamp_min(sum by (sys_id) (label_replace(increase(tcp_bridge_outbound_requests_total{job=~\"$job\", pod=~\"$pod\"}[2m]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\")), 1)) and on (sys_id) max by (sys_id) (tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"})",
-          "legendFormat": "{{sys_id}} Request",
+          "legendFormat": "{{sys_id}} 처리완료율",
           "refId": "A"
         },
         {
           "expr": "((sum by (sys_id) (label_replace(increase(tcp_bridge_outbound_responses_sent_total{job=~\"$job\", pod=~\"$pod\"}[2m]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\"))) / clamp_min(sum by (sys_id) (label_replace(increase(tcp_bridge_outbound_requests_total{job=~\"$job\", pod=~\"$pod\"}[2m]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\")), 1)) and on (sys_id) max by (sys_id) (tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"})",
-          "legendFormat": "{{sys_id}} Response",
+          "legendFormat": "{{sys_id}} 응답송신율",
           "refId": "B"
         }
       ],
@@ -235,7 +235,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": ".*Response"
+              "options": ".*응답송신율"
             },
             "properties": [
               {
@@ -263,7 +263,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": ".*Request"
+              "options": ".*처리완료율"
             },
             "properties": [
               {
@@ -318,7 +318,7 @@
       "id": 11,
       "type": "timeseries",
       "title": "PG별 Inbound 메시지 Error Count",
-      "description": "\ucd5c\uadfc $__rate_interval \ub3d9\uc548 \uc99d\uac00\ud55c inbound outcomes_total \uc911 ok\ub97c \uc81c\uc678\ud558\uace0 msg_type, reason, connection_id\ubcc4\ub85c \ud569\uc0b0\ud574 \ud45c\uc2dc.",
+      "description": "\ucd5c\uadfc $__rate_interval \ub3d9\uc548 \uc99d\uac00\ud55c inbound outcomes_total \uc911 ok\ub97c \uc81c\uc678\ud558\uace0 msg_type, reason, connection_name\ubcc4\ub85c \ud569\uc0b0\ud574 \ud45c\uc2dc.",
       "gridPos": {
         "x": 0,
         "y": 14,
@@ -331,8 +331,8 @@
       },
       "targets": [
         {
-          "expr": "label_replace(label_replace(label_join(sum by (connection_id, msg_type, reason) ((label_replace(increase(tcp_bridge_inbound_outcomes_total{job=~\"$job\", pod=~\"$pod\", reason!=\"ok\"}[$__rate_interval]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\")) and on (sys_id) max by (sys_id) (tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"})), \"pg_id\", \"\", \"connection_id\"), \"pg_id\", \"unknown\", \"pg_id\", \"^$\"), \"pg_id\", \"PG$1\", \"pg_id\", \"conn_(.*)\")",
-          "legendFormat": "{{pg_id}} / {{msg_type}} / {{reason}}",
+          "expr": "sum by (connection_name, msg_type, reason) ((label_replace(increase(tcp_bridge_inbound_outcomes_total{job=~\"$job\", pod=~\"$pod\", reason!=\"ok\"}[$__rate_interval]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\") ) and on (sys_id, connection_name) max by (sys_id, connection_name) (tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"}))",
+          "legendFormat": "{{connection_name}} / {{msg_type}} / {{reason}}",
           "refId": "A"
         }
       ],
@@ -363,7 +363,7 @@
       "id": 12,
       "type": "timeseries",
       "title": "PG별 Outbound 메시지 Error Count",
-      "description": "\ucd5c\uadfc $__rate_interval \ub3d9\uc548 \uc99d\uac00\ud55c outbound outcomes_total \uc911 ok\ub97c \uc81c\uc678\ud558\uace0 msg_type, reason, connection_id\ubcc4\ub85c \ud569\uc0b0\ud574 \ud45c\uc2dc.",
+      "description": "\ucd5c\uadfc $__rate_interval \ub3d9\uc548 \uc99d\uac00\ud55c outbound outcomes_total \uc911 ok\ub97c \uc81c\uc678\ud558\uace0 msg_type, reason, connection_name\ubcc4\ub85c \ud569\uc0b0\ud574 \ud45c\uc2dc.",
       "gridPos": {
         "x": 12,
         "y": 14,
@@ -376,8 +376,8 @@
       },
       "targets": [
         {
-          "expr": "label_replace(label_replace(label_join(sum by (connection_id, msg_type, reason) ((label_replace(increase(tcp_bridge_outbound_outcomes_total{job=~\"$job\", pod=~\"$pod\", reason!=\"ok\"}[$__rate_interval]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\")) and on (sys_id) max by (sys_id) (tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"})), \"pg_id\", \"\", \"connection_id\"), \"pg_id\", \"unknown\", \"pg_id\", \"^$\"), \"pg_id\", \"PG$1\", \"pg_id\", \"conn_(.*)\")",
-          "legendFormat": "{{pg_id}} / {{msg_type}} / {{reason}}",
+          "expr": "sum by (connection_name, msg_type, reason) ((label_replace(increase(tcp_bridge_outbound_outcomes_total{job=~\"$job\", pod=~\"$pod\", reason!=\"ok\"}[$__rate_interval]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\") ) and on (sys_id, connection_name) max by (sys_id, connection_name) (tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"}))",
+          "legendFormat": "{{connection_name}} / {{msg_type}} / {{reason}}",
           "refId": "A"
         }
       ],
@@ -433,8 +433,8 @@
       },
       "targets": [
         {
-          "expr": "max by (pod_group, connection_id, pg_id) (label_replace(label_replace(label_join(label_replace(tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"}, \"pod_group\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\"), \"pg_id\", \"\", \"connection_id\"), \"pg_id\", \"unknown\", \"pg_id\", \"^$\"), \"pg_id\", \"PG$1\", \"pg_id\", \"conn_(.*)\"))",
-          "legendFormat": "{{pod_group}} / {{pg_id}}",
+          "expr": "max by (pod_group, connection_name) (label_replace(tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"}, \"pod_group\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\"))",
+          "legendFormat": "{{pod_group}} / {{connection_name}}",
           "refId": "A"
         }
       ],
@@ -501,9 +501,14 @@
       },
       "targets": [
         {
-          "expr": "max by (pod_group, connection_id, pg_id) (label_replace(label_replace(label_join(label_replace((tcp_bridge_selected_connection == 1) and on (job, namespace, pod, connection_id) (tcp_bridge_connection_state > 0), \"pod_group\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\"), \"pg_id\", \"\", \"connection_id\"), \"pg_id\", \"unknown\", \"pg_id\", \"^$\"), \"pg_id\", \"PG$1\", \"pg_id\", \"conn_(.*)\"))",
-          "legendFormat": "{{pod_group}} / {{pg_id}}",
+          "expr": "max by (pod_group, connection_name) (label_replace(tcp_bridge_selected_connection{job=~\"$job\", pod=~\"$pod\"} == 1, \"pod_group\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\"))",
+          "legendFormat": "{{pod_group}} / {{connection_name}}",
           "refId": "A"
+        },
+        {
+          "expr": "max by (connection_name) (tcp_bridge_selected_connection{job=~\"$job\", pod=~\"$pod\"}) == 0",
+          "legendFormat": "{{connection_name}}",
+          "refId": "B"
         }
       ],
       "instant": true,
@@ -522,13 +527,22 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "fixedColor": "green",
-            "mode": "fixed"
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
           },
           "mappings": [
             {
               "type": "value",
               "options": {
+                "0": {
+                  "text": "Disconnected"
+                },
                 "1": {
                   "text": "Active"
                 }
@@ -553,8 +567,8 @@
     {
       "id": 31,
       "type": "timeseries",
-      "title": "PG별 Inbound 종단간 지연시간",
-      "description": "Histogram \uae30\ubc18 inbound end-to-end latency. connection_id\ubcc4 p95\ub97c \uc911\uc2ec\uc73c\ub85c \ubcf4\uace0 p50\ub294 \ube44\uad50\uc6a9\uc73c\ub85c \ud655\uc778.",
+      "title": "연결별 Inbound 종단간 지연시간",
+      "description": "Histogram \uae30\ubc18 inbound end-to-end latency. connection_name\ubcc4 p95\ub97c \uc911\uc2ec\uc73c\ub85c \ubcf4\uace0 p50\ub294 \ube44\uad50\uc6a9\uc73c\ub85c \ud655\uc778.",
       "gridPos": {
         "x": 0,
         "y": 22,
@@ -567,13 +581,13 @@
       },
       "targets": [
         {
-          "expr": "label_replace(label_replace(label_join(histogram_quantile(0.50, sum by (le, connection_id) ((label_replace(rate(tcp_bridge_inbound_end_to_end_duration_seconds_bucket{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\")) and on (sys_id) max by (sys_id) (tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"}))), \"pg_id\", \"\", \"connection_id\"), \"pg_id\", \"unknown\", \"pg_id\", \"^$\"), \"pg_id\", \"PG$1\", \"pg_id\", \"conn_(.*)\")",
-          "legendFormat": "{{pg_id}} p50",
+          "expr": "histogram_quantile(0.50, sum by (le, connection_name) ((label_replace(rate(tcp_bridge_inbound_end_to_end_duration_seconds_bucket{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\") ) and on (sys_id, connection_name) max by (sys_id, connection_name) (tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"})))",
+          "legendFormat": "{{connection_name}} p50",
           "refId": "A"
         },
         {
-          "expr": "label_replace(label_replace(label_join(histogram_quantile(0.95, sum by (le, connection_id) ((label_replace(rate(tcp_bridge_inbound_end_to_end_duration_seconds_bucket{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\")) and on (sys_id) max by (sys_id) (tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"}))), \"pg_id\", \"\", \"connection_id\"), \"pg_id\", \"unknown\", \"pg_id\", \"^$\"), \"pg_id\", \"PG$1\", \"pg_id\", \"conn_(.*)\")",
-          "legendFormat": "{{pg_id}} p95",
+          "expr": "histogram_quantile(0.95, sum by (le, connection_name) ((label_replace(rate(tcp_bridge_inbound_end_to_end_duration_seconds_bucket{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\") ) and on (sys_id, connection_name) max by (sys_id, connection_name) (tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"})))",
+          "legendFormat": "{{connection_name}} p95",
           "refId": "B"
         }
       ],
@@ -639,8 +653,8 @@
     {
       "id": 32,
       "type": "timeseries",
-      "title": "PG별 Outbound 종단간 지연시간",
-      "description": "Histogram \uae30\ubc18 outbound end-to-end latency. connection_id\ubcc4 p95\ub97c \uc911\uc2ec\uc73c\ub85c \ubcf4\uace0 p50\ub294 \ube44\uad50\uc6a9\uc73c\ub85c \ud655\uc778.",
+      "title": "연결별 Outbound 종단간 지연시간",
+      "description": "Histogram \uae30\ubc18 outbound end-to-end latency. connection_name\ubcc4 p95\ub97c \uc911\uc2ec\uc73c\ub85c \ubcf4\uace0 p50\ub294 \ube44\uad50\uc6a9\uc73c\ub85c \ud655\uc778.",
       "gridPos": {
         "x": 12,
         "y": 22,
@@ -653,13 +667,13 @@
       },
       "targets": [
         {
-          "expr": "label_replace(label_replace(label_join(histogram_quantile(0.50, sum by (le, connection_id) ((label_replace(rate(tcp_bridge_outbound_end_to_end_duration_seconds_bucket{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\")) and on (sys_id) max by (sys_id) (tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"}))), \"pg_id\", \"\", \"connection_id\"), \"pg_id\", \"unknown\", \"pg_id\", \"^$\"), \"pg_id\", \"PG$1\", \"pg_id\", \"conn_(.*)\")",
-          "legendFormat": "{{pg_id}} p50",
+          "expr": "histogram_quantile(0.50, sum by (le, connection_name) ((label_replace(rate(tcp_bridge_outbound_end_to_end_duration_seconds_bucket{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\") ) and on (sys_id, connection_name) max by (sys_id, connection_name) (tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"})))",
+          "legendFormat": "{{connection_name}} p50",
           "refId": "A"
         },
         {
-          "expr": "label_replace(label_replace(label_join(histogram_quantile(0.95, sum by (le, connection_id) ((label_replace(rate(tcp_bridge_outbound_end_to_end_duration_seconds_bucket{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\")) and on (sys_id) max by (sys_id) (tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"}))), \"pg_id\", \"\", \"connection_id\"), \"pg_id\", \"unknown\", \"pg_id\", \"^$\"), \"pg_id\", \"PG$1\", \"pg_id\", \"conn_(.*)\")",
-          "legendFormat": "{{pg_id}} p95",
+          "expr": "histogram_quantile(0.95, sum by (le, connection_name) ((label_replace(rate(tcp_bridge_outbound_end_to_end_duration_seconds_bucket{job=~\"$job\", pod=~\"$pod\"}[$__rate_interval]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\") ) and on (sys_id, connection_name) max by (sys_id, connection_name) (tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"})))",
+          "legendFormat": "{{connection_name}} p95",
           "refId": "B"
         }
       ],
@@ -737,7 +751,7 @@
     {
       "id": 33,
       "type": "timeseries",
-      "title": "Total Inbound 소통률",
+      "title": "Total Inbound 처리완료율 / 응답송신율",
       "description": "\uc804\uccb4 tcp-bridge pod\ub4e4\uc758 \ud569\uc0b0 - \ucd5c\uadfc 2\ubd84 \ub3d9\uc548 \uc99d\uac00\ud55c inbound requests_total \ub300\ube44 outcomes_total \ube44\uc728\uacfc inbound_responses_sent_total \ube44\uc728\uc744 \uac01\uac01 \ud45c\uc2dc.",
       "gridPos": {
         "x": 0,
@@ -752,12 +766,12 @@
       "targets": [
         {
           "expr": "(sum(increase(tcp_bridge_inbound_outcomes_total{job=~\"$job\", pod=~\"$pod\"}[2m]))) / clamp_min(sum(increase(tcp_bridge_inbound_requests_total{job=~\"$job\", pod=~\"$pod\"}[2m])), 1)",
-          "legendFormat": "Request",
+          "legendFormat": "처리완료율",
           "refId": "A"
         },
         {
           "expr": "(sum(increase(tcp_bridge_inbound_responses_sent_total{job=~\"$job\", pod=~\"$pod\"}[2m]))) / clamp_min(sum(increase(tcp_bridge_inbound_requests_total{job=~\"$job\", pod=~\"$pod\"}[2m])), 1)",
-          "legendFormat": "Response",
+          "legendFormat": "응답송신율",
           "refId": "B"
         }
       ],
@@ -776,7 +790,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": ".*Response"
+              "options": ".*응답송신율"
             },
             "properties": [
               {
@@ -804,7 +818,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": ".*Request"
+              "options": ".*처리완료율"
             },
             "properties": [
               {
@@ -846,7 +860,7 @@
     {
       "id": 34,
       "type": "timeseries",
-      "title": "Total Outbound 소통률",
+      "title": "Total Outbound 처리완료율 / 응답송신율",
       "description": "\uc804\uccb4 tcp-bridge pod\ub4e4\uc758 \ud569\uc0b0 - \ucd5c\uadfc 2\ubd84 \ub3d9\uc548 \uc99d\uac00\ud55c outbound requests_total \ub300\ube44 outcomes_total \ube44\uc728\uacfc outbound_responses_sent_total \ube44\uc728\uc744 \uac01\uac01 \ud45c\uc2dc.",
       "gridPos": {
         "x": 12,
@@ -861,12 +875,12 @@
       "targets": [
         {
           "expr": "(sum(increase(tcp_bridge_outbound_outcomes_total{job=~\"$job\", pod=~\"$pod\"}[2m]))) / clamp_min(sum(increase(tcp_bridge_outbound_requests_total{job=~\"$job\", pod=~\"$pod\"}[2m])), 1)",
-          "legendFormat": "Request",
+          "legendFormat": "처리완료율",
           "refId": "A"
         },
         {
           "expr": "(sum(increase(tcp_bridge_outbound_responses_sent_total{job=~\"$job\", pod=~\"$pod\"}[2m]))) / clamp_min(sum(increase(tcp_bridge_outbound_requests_total{job=~\"$job\", pod=~\"$pod\"}[2m])), 1)",
-          "legendFormat": "Response",
+          "legendFormat": "응답송신율",
           "refId": "B"
         }
       ],
@@ -885,7 +899,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": ".*Response"
+              "options": ".*응답송신율"
             },
             "properties": [
               {
@@ -913,7 +927,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": ".*Request"
+              "options": ".*처리완료율"
             },
             "properties": [
               {
@@ -956,7 +970,7 @@
       "id": 35,
       "type": "timeseries",
       "title": "Total Inbound 메시지 Error Count",
-      "description": "\uc804\uccb4 tcp-bridge pod \ud569\uc0b0 - \ucd5c\uadfc $__rate_interval \ub3d9\uc548 \uc99d\uac00\ud55c inbound outcomes_total \uc911 ok\ub97c \uc81c\uc678\ud558\uace0 connection_id, msg_type, reason\ubcc4\ub85c \ud569\uc0b0\ud574 \ud45c\uc2dc.",
+      "description": "\uc804\uccb4 tcp-bridge pod \ud569\uc0b0 - \ucd5c\uadfc $__rate_interval \ub3d9\uc548 \uc99d\uac00\ud55c inbound outcomes_total \uc911 ok\ub97c \uc81c\uc678\ud558\uace0 msg_type, reason\ubcc4\ub85c \ud569\uc0b0\ud574 \ud45c\uc2dc.",
       "gridPos": {
         "x": 0,
         "y": 37,
@@ -1001,7 +1015,7 @@
       "id": 36,
       "type": "timeseries",
       "title": "Total Outbound 메시지 Error Count",
-      "description": "\uc804\uccb4 tcp-bridge pod \ud569\uc0b0 - \ucd5c\uadfc $__rate_interval \ub3d9\uc548 \uc99d\uac00\ud55c outbound outcomes_total \uc911 ok\ub97c \uc81c\uc678\ud558\uace0 connection_id, msg_type, reason\ubcc4\ub85c \ud569\uc0b0\ud574 \ud45c\uc2dc.",
+      "description": "\uc804\uccb4 tcp-bridge pod \ud569\uc0b0 - \ucd5c\uadfc $__rate_interval \ub3d9\uc548 \uc99d\uac00\ud55c outbound outcomes_total \uc911 ok\ub97c \uc81c\uc678\ud558\uace0 msg_type, reason\ubcc4\ub85c \ud569\uc0b0\ud574 \ud45c\uc2dc.",
       "gridPos": {
         "x": 12,
         "y": 37,

@@ -8,21 +8,6 @@ metadata:
     app.kubernetes.io/name: tcp-bridge
 spec:
   groups:
-    - name: tcp-bridge.connectivity
-      rules:
-        - alert: PGConnectionState
-          expr: tcp_bridge:ready_connection_state:max < 2
-          for: 1m
-          labels:
-            severity: critical
-            environment: MetricAlert
-            service: "{sys_id}"
-            exported_instance: "{connection_id}"
-          annotations:
-            errCode: "2002"
-            summary: connection READY 상태 아님
-            description: 지난 2분 동안 `{{ $labels.sys_id }}`의 `{{ $labels.connection_id }}` connection이 READY 상태가 아님. 
-
     - name: tcp-bridge.inbound
       rules:
         - alert: PGInboundErrorRatio
@@ -36,13 +21,14 @@ spec:
           labels:
             severity: critical
             environment: MetricAlert
-            service: "upm"
-            exported_instance: "inbound"
+            service: "PGInboundErrorRatio"
+            event: "{connection_name}"
+            exported_instance: "{sys_id}"
           annotations:
             errCode: "3001"
-            summary: inbound error ratio 심각
+            summary: "{{ $labels.connection_name }} inbound error ratio 심각"
             value: '{{ humanizePercentage $value }}'
-            description: 최근 2분 동안 완료된 inbound 요청 1건 이상 조건으로 error ratio `{{ humanizePercentage $value }}` 이상이 1분 이상 유지됨. 
+            description: 최근 2분 동안 `{{ $labels.sys_id }}`의 `{{ $labels.connection_name }}` connection에서 완료된 inbound 요청 1건 이상 조건으로 error ratio `{{ humanizePercentage $value }}` 이상이 1분 이상 유지됨. 
 
     - name: tcp-bridge.outbound
       rules:
@@ -57,9 +43,10 @@ spec:
           labels:
             severity: critical
             environment: MetricAlert
-            service: "upm"
-            exported_instance: "outbound"
+            service: "PGOutboundErrorRatio"
+            event: "{connection_name}"
+            exported_instance: "{sys_id}"
           annotations:
             errCode: "4001"
-            summary: outbound error ratio 심각
-            description: 최근 2분 동안 완료된 outbound 요청 1건 이상 조건으로 error ratio `{{ humanizePercentage $value }}` 이상이 1분 이상 유지됨. 
+            summary: "{{ $labels.connection_name }} outbound error ratio 심각"
+            description: 최근 2분 동안 `{{ $labels.sys_id }}`의 `{{ $labels.connection_name }}` connection에서 완료된 outbound 요청 1건 이상 조건으로 error ratio `{{ humanizePercentage $value }}` 이상이 1분 이상 유지됨. 

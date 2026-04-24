@@ -132,10 +132,12 @@ config:
 
   tcp:
     endpoints:
-      - host: "192.168.10.112"
+      - name: "PG01"
+        host: "192.168.10.112"
         port: 10506
         priority: 0
-      - host: "10.255.254.22"
+      - name: "PG-TEST"
+        host: "10.255.254.22"
         port: 10506
         priority: 1
     
@@ -210,7 +212,7 @@ config:
     timeout: "3s"
     environment: "RealTimeAlert"
     alerts:
-      - event: "PGConnectionState"
+      - item: "PGConnectionState"
         group: "Connection"
         err_code: "1004"
 
