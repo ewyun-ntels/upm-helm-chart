@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "distributor.fullname" . }}-config
+  labels:
+    {{- include "distributor.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    log:
+      level: {{ .Values.config.log.level | quote }}
+
+    server:
+      port: {{ .Values.config.server.port }}
+
+    nats:
+      url: {{ .Values.config.nats.url | quote }}
+      bucket: {{ .Values.config.nats.bucket | quote }}
+
+    watch:
+      namespaces:
+        {{- toYaml .Values.config.watch.namespaces | nindent 8 }}
+      resources:
+        {{- toYaml .Values.config.watch.resources | nindent 8 }}
+
+    filter:
+      managedLabel:
+        key: {{ .Values.config.filter.managedLabel.key | quote }}
+        value: {{ .Values.config.filter.managedLabel.value | quote }}

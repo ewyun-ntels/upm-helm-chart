@@ -1,4 +1,13 @@
 ---
+# [Index] 종류
+# - app-* : app 로그
+# - node-* : 시스템 로그
+# - msg-* : msg 히스토리 로그
+# - app-*, node-* : logs-retention-7d ISM 정책 적용, 7일 후 삭제
+# - msg-* : msg-daily-rollover ISM 정책 적용, 하루 단위 rollover, 7일 후 삭제
+# - msg-* alias : msg-write, msg-last-7d
+
+
 clusterName: "opensearch-cluster"
 nodeGroup: "master"
 
@@ -452,9 +461,9 @@ fullnameOverride: ""
 masterTerminationFix: false
 
 opensearchLifecycle:
-  # edited by ewyun: register a 7-day ISM retention policy for application, message, and node log indices
-  # edited by ewyun: apply the same retention policy to app-*, msg-*, and node-* index patterns
-  # edited by ewyun: setup rolling-* index with daily rollover and 7-day retention
+  # edited by ewyun: register a 7-day ISM retention policy for application and node log indices
+  # edited by ewyun: apply the same retention policy to app-* and node-* index patterns
+  # edited by ewyun: setup msg-* index with daily rollover and 7-day retention
   postStart:
     exec:
       command:
@@ -469,12 +478,12 @@ opensearchLifecycle:
             sleep 5
           done
 
-          # Create logs retention policy
+          # Create logs retention policy for app-* and node-* indices
           curl -sk -u "${AUTH}" -X PUT "${ES_URL}/_plugins/_ism/policies/logs-retention-7d" \
             -H 'Content-Type: application/json' \
             -d '{
               "policy": {
-                "description": "Delete application log indices after 7 days",
+                "description": "Delete app and node log indices after 7 days",
                 "default_state": "hot",
                 "states": [
                   {
@@ -503,7 +512,6 @@ opensearchLifecycle:
                   {
                     "index_patterns": [
                       "app-*",
-                      "msg-*",
                       "node-*"
                     ],
                     "priority": 100
@@ -512,39 +520,39 @@ opensearchLifecycle:
               }
             }'
 
-          # Create index template for rolling-* indices
-          curl -sk -u "${AUTH}" -X PUT "${ES_URL}/_index_template/rolling-template" \
+          # Create index template for msg-* indices
+          curl -sk -u "${AUTH}" -X PUT "${ES_URL}/_index_template/msg-template" \
             -H 'Content-Type: application/json' \
             -d '{
-              "index_patterns": ["rolling-*"],
+              "index_patterns": ["msg-*"],
               "template": {
                 "settings": {
                   "number_of_shards": 1,
                   "number_of_replicas": 1,
-                  "plugins.index_state_management.rollover_alias": "rolling-write"
+                  "plugins.index_state_management.rollover_alias": "msg-write"
                 }
               }
             }'
 
-          # Create initial rolling index with write and read aliases
-          INIT_INDEX="rolling-$(date +%Y.%m.%d)-000001"
+          # Create initial msg index with write and read aliases
+          INIT_INDEX="msg-$(date +%Y.%m.%d)-000001"
           curl -sk -u "${AUTH}" -X PUT "${ES_URL}/${INIT_INDEX}" \
             -H 'Content-Type: application/json' \
             -d '{
               "aliases": {
-                "rolling-write": {
+                "msg-write": {
                   "is_write_index": true
                 },
-                "rolling-last-7d": {}
+                "msg-last-7d": {}
               }
             }' || true
 
-          # Create ISM policy for rolling indices with daily rollover and 7-day retention
-          curl -sk -u "${AUTH}" -X PUT "${ES_URL}/_plugins/_ism/policies/rolling-daily-rollover" \
+          # Create ISM policy for msg indices with daily rollover and 7-day retention
+          curl -sk -u "${AUTH}" -X PUT "${ES_URL}/_plugins/_ism/policies/msg-daily-rollover" \
             -H 'Content-Type: application/json' \
             -d '{
               "policy": {
-                "description": "Daily rollover and 7-day retention for rolling indices",
+                "description": "Daily rollover and 7-day retention for msg indices",
                 "default_state": "active",
                 "states": [
                   {
@@ -572,7 +580,7 @@ opensearchLifecycle:
                         "alias": {
                           "remove": [
                             {
-                              "alias": "rolling-last-7d"
+                              "alias": "msg-last-7d"
                             }
                           ]
                         }
@@ -586,7 +594,7 @@ opensearchLifecycle:
                 ],
                 "ism_template": [
                   {
-                    "index_patterns": ["rolling-*"],
+                    "index_patterns": ["msg-*"],
                     "priority": 100
                   }
                 ]
