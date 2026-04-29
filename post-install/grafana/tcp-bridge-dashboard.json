@@ -88,7 +88,7 @@
       "id": 6,
       "type": "timeseries",
       "title": "TCP 브릿지별 Inbound 처리완료율 / 응답송신율",
-      "description": "\ucd5c\uadfc 2\ubd84 \ub3d9\uc548 \uc99d\uac00\ud55c inbound requests_total \ub300\ube44 outcomes_total \ube44\uc728\uacfc inbound_responses_sent_total \ube44\uc728\uc744 \uac01\uac01 \ud45c\uc2dc. \ucd5c\uc885 \ucc98\ub9ac \uc644\ub8cc\uc728\uacfc \uc678\ubd80 TCP \uc751\ub2f5 \uc1a1\uc2e0\uc728\uc744 \ubd84\ub9ac\ud574 \ucd94\uc774\ub97c \ud655\uc778.",
+      "description": "최근 2분 동안 증가한 inbound requests_total 대비 outcomes_total 비율과 inbound_responses_sent_total 비율을 각각 표시. 최종 처리 완료율과 외부 TCP 응답 송신율을 분리해 추이를 확인.",
       "gridPos": {
         "x": 0,
         "y": 6,
@@ -197,7 +197,7 @@
       "id": 7,
       "type": "timeseries",
       "title": "TCP 브릿지별 Outbound 처리완료율 / 응답송신율",
-      "description": "\ucd5c\uadfc 2\ubd84 \ub3d9\uc548 \uc99d\uac00\ud55c outbound requests_total \ub300\ube44 outcomes_total \ube44\uc728\uacfc outbound_responses_sent_total \ube44\uc728\uc744 \uac01\uac01 \ud45c\uc2dc. \ucd5c\uc885 \ucc98\ub9ac \uc644\ub8cc\uc728\uacfc NATS reply \uc1a1\uc2e0\uc728\uc744 \ubd84\ub9ac\ud574 \ucd94\uc774\ub97c \ud655\uc778.",
+      "description": "최근 2분 동안 증가한 outbound requests_total 대비 outcomes_total 비율과 outbound_responses_sent_total 비율을 각각 표시. 최종 처리 완료율과 NATS reply 송신율을 분리해 추이를 확인.",
       "gridPos": {
         "x": 12,
         "y": 6,
@@ -303,12 +303,104 @@
       }
     },
     {
+      "id": 8,
+      "type": "timeseries",
+      "title": "TCP 브릿지별 Inbound Request Count",
+      "description": "최근 2분 동안 증가한 inbound requests_total을 tcp-bridge sys_id별로 합산해 표시.",
+      "gridPos": {
+        "x": 0,
+        "y": 13,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "sum by (sys_id) (label_replace(increase(tcp_bridge_inbound_requests_total{job=~\"$job\", pod=~\"$pod\"}[2m]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\")) and on (sys_id) max by (sys_id) (tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"})",
+          "legendFormat": "{{sys_id}} request",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "mean"
+          ]
+        }
+      }
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "TCP 브릿지별 Outbound Request Count",
+      "description": "최근 2분 동안 증가한 outbound requests_total을 tcp-bridge sys_id별로 합산해 표시.",
+      "gridPos": {
+        "x": 12,
+        "y": 13,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "sum by (sys_id) (label_replace(increase(tcp_bridge_outbound_requests_total{job=~\"$job\", pod=~\"$pod\"}[2m]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\")) and on (sys_id) max by (sys_id) (tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"})",
+          "legendFormat": "{{sys_id}} request",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 12
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "mean"
+          ]
+        }
+      }
+    },
+    {
       "id": 10,
       "type": "row",
       "title": "트래픽 상세",
       "gridPos": {
         "x": 0,
-        "y": 13,
+        "y": 20,
         "w": 24,
         "h": 1
       },
@@ -318,10 +410,10 @@
       "id": 11,
       "type": "timeseries",
       "title": "PG별 Inbound 메시지 Error Count",
-      "description": "\ucd5c\uadfc $__rate_interval \ub3d9\uc548 \uc99d\uac00\ud55c inbound outcomes_total \uc911 ok\ub97c \uc81c\uc678\ud558\uace0 msg_type, reason, connection_name\ubcc4\ub85c \ud569\uc0b0\ud574 \ud45c\uc2dc.",
+      "description": "최근 $__rate_interval 동안 증가한 inbound outcomes_total 중 ok를 제외하고 msg_type, reason, connection_name별로 합산해 표시.",
       "gridPos": {
         "x": 0,
-        "y": 14,
+        "y": 21,
         "w": 12,
         "h": 7
       },
@@ -363,10 +455,10 @@
       "id": 12,
       "type": "timeseries",
       "title": "PG별 Outbound 메시지 Error Count",
-      "description": "\ucd5c\uadfc $__rate_interval \ub3d9\uc548 \uc99d\uac00\ud55c outbound outcomes_total \uc911 ok\ub97c \uc81c\uc678\ud558\uace0 msg_type, reason, connection_name\ubcc4\ub85c \ud569\uc0b0\ud574 \ud45c\uc2dc.",
+      "description": "최근 $__rate_interval 동안 증가한 outbound outcomes_total 중 ok를 제외하고 msg_type, reason, connection_name별로 합산해 표시.",
       "gridPos": {
         "x": 12,
-        "y": 14,
+        "y": 21,
         "w": 12,
         "h": 7
       },
@@ -420,7 +512,7 @@
       "id": 21,
       "type": "stat",
       "title": "연결상태",
-      "description": "\ud604\uc7ac connection \uc0c1\ud0dc\ub97c \ud45c\uc2dc\ud569\ub2c8\ub2e4. 2\ub294 Ready, 1\uc740 Connecting, 0\uc740 Disconnected\ub97c \uc758\ubbf8\ud569\ub2c8\ub2e4.",
+      "description": "현재 connection 상태를 표시합니다. 2는 Ready, 1은 Connecting, 0은 Disconnected를 의미합니다.",
       "gridPos": {
         "x": 0,
         "y": 1,
@@ -488,7 +580,7 @@
       "id": 22,
       "type": "stat",
       "title": "Outbound Primary 연결",
-      "description": "\ud604\uc7ac \uc120\ud0dd\ub41c primary connection. outbound \uc804\uc1a1\uc5d0 \uc0ac\uc6a9\ub418\ub294 active connection \ud45c\uc2dc.",
+      "description": "현재 선택된 primary connection. outbound 전송에 사용되는 active connection 표시.",
       "gridPos": {
         "x": 8,
         "y": 1,
@@ -532,8 +624,14 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "red", "value": null },
-              { "color": "green", "value": 1 }
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
             ]
           },
           "mappings": [
@@ -558,7 +656,7 @@
       "title": "지연 시간",
       "gridPos": {
         "x": 0,
-        "y": 21,
+        "y": 28,
         "w": 24,
         "h": 1
       },
@@ -568,10 +666,10 @@
       "id": 31,
       "type": "timeseries",
       "title": "연결별 Inbound 종단간 지연시간",
-      "description": "Histogram \uae30\ubc18 inbound end-to-end latency. connection_name\ubcc4 p95\ub97c \uc911\uc2ec\uc73c\ub85c \ubcf4\uace0 p50\ub294 \ube44\uad50\uc6a9\uc73c\ub85c \ud655\uc778.",
+      "description": "Histogram 기반 inbound end-to-end latency. connection_name별 p95를 중심으로 보고 p50는 비교용으로 확인.",
       "gridPos": {
         "x": 0,
-        "y": 22,
+        "y": 29,
         "w": 12,
         "h": 7
       },
@@ -654,10 +752,10 @@
       "id": 32,
       "type": "timeseries",
       "title": "연결별 Outbound 종단간 지연시간",
-      "description": "Histogram \uae30\ubc18 outbound end-to-end latency. connection_name\ubcc4 p95\ub97c \uc911\uc2ec\uc73c\ub85c \ubcf4\uace0 p50\ub294 \ube44\uad50\uc6a9\uc73c\ub85c \ud655\uc778.",
+      "description": "Histogram 기반 outbound end-to-end latency. connection_name별 p95를 중심으로 보고 p50는 비교용으로 확인.",
       "gridPos": {
         "x": 12,
-        "y": 22,
+        "y": 29,
         "w": 12,
         "h": 7
       },
@@ -742,7 +840,7 @@
       "title": "Total 서비스 집계",
       "gridPos": {
         "x": 0,
-        "y": 29,
+        "y": 36,
         "w": 24,
         "h": 1
       },
@@ -752,10 +850,10 @@
       "id": 33,
       "type": "timeseries",
       "title": "Total Inbound 처리완료율 / 응답송신율",
-      "description": "\uc804\uccb4 tcp-bridge pod\ub4e4\uc758 \ud569\uc0b0 - \ucd5c\uadfc 2\ubd84 \ub3d9\uc548 \uc99d\uac00\ud55c inbound requests_total \ub300\ube44 outcomes_total \ube44\uc728\uacfc inbound_responses_sent_total \ube44\uc728\uc744 \uac01\uac01 \ud45c\uc2dc.",
+      "description": "전체 tcp-bridge pod들의 합산 - 최근 2분 동안 증가한 inbound requests_total 대비 outcomes_total 비율과 inbound_responses_sent_total 비율을 각각 표시.",
       "gridPos": {
         "x": 0,
-        "y": 30,
+        "y": 37,
         "w": 12,
         "h": 7
       },
@@ -861,10 +959,10 @@
       "id": 34,
       "type": "timeseries",
       "title": "Total Outbound 처리완료율 / 응답송신율",
-      "description": "\uc804\uccb4 tcp-bridge pod\ub4e4\uc758 \ud569\uc0b0 - \ucd5c\uadfc 2\ubd84 \ub3d9\uc548 \uc99d\uac00\ud55c outbound requests_total \ub300\ube44 outcomes_total \ube44\uc728\uacfc outbound_responses_sent_total \ube44\uc728\uc744 \uac01\uac01 \ud45c\uc2dc.",
+      "description": "전체 tcp-bridge pod들의 합산 - 최근 2분 동안 증가한 outbound requests_total 대비 outcomes_total 비율과 outbound_responses_sent_total 비율을 각각 표시.",
       "gridPos": {
         "x": 12,
-        "y": 30,
+        "y": 37,
         "w": 12,
         "h": 7
       },
@@ -970,10 +1068,10 @@
       "id": 35,
       "type": "timeseries",
       "title": "Total Inbound 메시지 Error Count",
-      "description": "\uc804\uccb4 tcp-bridge pod \ud569\uc0b0 - \ucd5c\uadfc $__rate_interval \ub3d9\uc548 \uc99d\uac00\ud55c inbound outcomes_total \uc911 ok\ub97c \uc81c\uc678\ud558\uace0 msg_type, reason\ubcc4\ub85c \ud569\uc0b0\ud574 \ud45c\uc2dc.",
+      "description": "전체 tcp-bridge pod 합산 - 최근 $__rate_interval 동안 증가한 inbound outcomes_total 중 ok를 제외하고 msg_type, reason별로 합산해 표시.",
       "gridPos": {
         "x": 0,
-        "y": 37,
+        "y": 44,
         "w": 12,
         "h": 7
       },
@@ -1015,10 +1113,10 @@
       "id": 36,
       "type": "timeseries",
       "title": "Total Outbound 메시지 Error Count",
-      "description": "\uc804\uccb4 tcp-bridge pod \ud569\uc0b0 - \ucd5c\uadfc $__rate_interval \ub3d9\uc548 \uc99d\uac00\ud55c outbound outcomes_total \uc911 ok\ub97c \uc81c\uc678\ud558\uace0 msg_type, reason\ubcc4\ub85c \ud569\uc0b0\ud574 \ud45c\uc2dc.",
+      "description": "전체 tcp-bridge pod 합산 - 최근 $__rate_interval 동안 증가한 outbound outcomes_total 중 ok를 제외하고 msg_type, reason별로 합산해 표시.",
       "gridPos": {
         "x": 12,
-        "y": 37,
+        "y": 44,
         "w": 12,
         "h": 7
       },
@@ -1060,10 +1158,10 @@
       "id": 37,
       "type": "timeseries",
       "title": "Total Inbound 종단간 지연 시간",
-      "description": "\uc804\uccb4 tcp-bridge service \ud569\uc0b0 \uae30\uc900 inbound end-to-end latency. \uc804\uccb4 \ucd94\uc138\ub97c p95 \uc911\uc2ec\uc73c\ub85c \ud655\uc778\ud558\uace0 p50\ub294 \ube44\uad50\uc6a9\uc73c\ub85c \ubd05\ub2c8\ub2e4.",
+      "description": "전체 tcp-bridge service 합산 기준 inbound end-to-end latency. 전체 추세를 p95 중심으로 확인하고 p50는 비교용으로 봅니다.",
       "gridPos": {
         "x": 0,
-        "y": 44,
+        "y": 51,
         "w": 12,
         "h": 7
       },
@@ -1146,10 +1244,10 @@
       "id": 38,
       "type": "timeseries",
       "title": "Total Outbound 종단간 지연 시간",
-      "description": "\uc804\uccb4 tcp-bridge service \ud569\uc0b0 \uae30\uc900 outbound end-to-end latency. \uc804\uccb4 \ucd94\uc138\ub97c p95 \uc911\uc2ec\uc73c\ub85c \ud655\uc778\ud558\uace0 p50\ub294 \ube44\uad50\uc6a9\uc73c\ub85c \ubd05\ub2c8\ub2e4.",
+      "description": "전체 tcp-bridge service 합산 기준 outbound end-to-end latency. 전체 추세를 p95 중심으로 확인하고 p50는 비교용으로 봅니다.",
       "gridPos": {
         "x": 12,
-        "y": 44,
+        "y": 51,
         "w": 12,
         "h": 7
       },
