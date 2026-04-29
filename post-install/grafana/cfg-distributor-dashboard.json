@@ -1,0 +1,371 @@
+{
+  "title": "CFG Distributor 모니터링",
+  "uid": "cfg-distributor-overview",
+  "tags": [
+    "cfg-distributor",
+    "kube-events",
+    "kv-operations"
+  ],
+  "schemaVersion": 38,
+  "version": 2,
+  "refresh": "30s",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "graphTooltip": 1,
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {
+          "text": "thanos-query",
+          "value": "thanos-query",
+          "selected": true
+        },
+        "hide": 2,
+        "regex": "thanos-query"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "barchart",
+      "title": "Kubernetes Event - 결과별 (success / error)",
+      "description": "선택 기간 동안 발생한 Kubernetes event를 result별로 집계합니다.",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "sum by (target_namespace, result) (((label_replace(increase(cfg_distributor_kube_events_total{resource=\"configmap\", exported_namespace!=\"\"}[$__range]), \"target_namespace\", \"$1\", \"exported_namespace\", \"(.+)\") unless (label_replace(cfg_distributor_kube_events_total{resource=\"configmap\", exported_namespace!=\"\"}, \"target_namespace\", \"$1\", \"exported_namespace\", \"(.+)\") unless label_replace(cfg_distributor_kube_events_total{resource=\"configmap\", exported_namespace!=\"\"} offset $__range, \"target_namespace\", \"$1\", \"exported_namespace\", \"(.+)\"))) or (label_replace(cfg_distributor_kube_events_total{resource=\"configmap\", exported_namespace!=\"\"}, \"target_namespace\", \"$1\", \"exported_namespace\", \"(.+)\") unless label_replace(cfg_distributor_kube_events_total{resource=\"configmap\", exported_namespace!=\"\"} offset $__range, \"target_namespace\", \"$1\", \"exported_namespace\", \"(.+)\"))) or ((increase(cfg_distributor_kube_events_total{resource=\"configmap\", target_namespace!=\"\"}[$__range]) unless (cfg_distributor_kube_events_total{resource=\"configmap\", target_namespace!=\"\"} unless cfg_distributor_kube_events_total{resource=\"configmap\", target_namespace!=\"\"} offset $__range)) or (cfg_distributor_kube_events_total{resource=\"configmap\", target_namespace!=\"\"} unless cfg_distributor_kube_events_total{resource=\"configmap\", target_namespace!=\"\"} offset $__range)))",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 0,
+            "barAlignment": 0,
+            "gradientMode": "none"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byValue", "options": { "reducer": "allIsZero" } },
+            "properties": [{ "id": "custom.hideFrom", "value": { "legend": true, "tooltip": true, "viz": true } }]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "auto",
+        "xTickLabelRotation": 0,
+        "groupWidth": 0.7,
+        "barWidth": 0.97,
+        "xField": "target_namespace",
+        "colorByField": "result",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": ["sum"]
+        },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "transformations": [
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "result": { "aggregations": [], "operation": "groupby" },
+              "Value": { "aggregations": ["sum"], "operation": "aggregate" }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "barchart",
+      "title": "Kubernetes Event - Error reason별",
+      "description": "선택 기간 동안 발생한 Kubernetes event 중 error를 reason별로 집계합니다.",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "sum by (target_namespace, reason) (((label_replace(increase(cfg_distributor_kube_events_total{resource=\"configmap\", result=\"error\", exported_namespace!=\"\"}[$__range]), \"target_namespace\", \"$1\", \"exported_namespace\", \"(.+)\") unless (label_replace(cfg_distributor_kube_events_total{resource=\"configmap\", result=\"error\", exported_namespace!=\"\"}, \"target_namespace\", \"$1\", \"exported_namespace\", \"(.+)\") unless label_replace(cfg_distributor_kube_events_total{resource=\"configmap\", result=\"error\", exported_namespace!=\"\"} offset $__range, \"target_namespace\", \"$1\", \"exported_namespace\", \"(.+)\"))) or (label_replace(cfg_distributor_kube_events_total{resource=\"configmap\", result=\"error\", exported_namespace!=\"\"}, \"target_namespace\", \"$1\", \"exported_namespace\", \"(.+)\") unless label_replace(cfg_distributor_kube_events_total{resource=\"configmap\", result=\"error\", exported_namespace!=\"\"} offset $__range, \"target_namespace\", \"$1\", \"exported_namespace\", \"(.+)\"))) or ((increase(cfg_distributor_kube_events_total{resource=\"configmap\", result=\"error\", target_namespace!=\"\"}[$__range]) unless (cfg_distributor_kube_events_total{resource=\"configmap\", result=\"error\", target_namespace!=\"\"} unless cfg_distributor_kube_events_total{resource=\"configmap\", result=\"error\", target_namespace!=\"\"} offset $__range)) or (cfg_distributor_kube_events_total{resource=\"configmap\", result=\"error\", target_namespace!=\"\"} unless cfg_distributor_kube_events_total{resource=\"configmap\", result=\"error\", target_namespace!=\"\"} offset $__range)))",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "0",
+          "color": { "mode": "fixed", "fixedColor": "red" },
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 0,
+            "barAlignment": 0,
+            "gradientMode": "none"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "auto",
+        "xTickLabelRotation": 0,
+        "groupWidth": 0.7,
+        "barWidth": 0.97,
+        "xField": "target_namespace",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": ["sum"]
+        },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "transformations": [
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "reason": { "aggregations": [], "operation": "groupby" },
+              "Value": { "aggregations": ["sum"], "operation": "aggregate" }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "barchart",
+      "title": "KV Operations - 결과별 (success / error)",
+      "description": "선택 기간 동안 발생한 KV operation을 result별로 집계합니다.",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "sum by (target_namespace, result) (((label_replace(increase(cfg_distributor_kv_operations_total{resource=\"configmap\", exported_namespace!=\"\"}[$__range]), \"target_namespace\", \"$1\", \"exported_namespace\", \"(.+)\") unless (label_replace(cfg_distributor_kv_operations_total{resource=\"configmap\", exported_namespace!=\"\"}, \"target_namespace\", \"$1\", \"exported_namespace\", \"(.+)\") unless label_replace(cfg_distributor_kv_operations_total{resource=\"configmap\", exported_namespace!=\"\"} offset $__range, \"target_namespace\", \"$1\", \"exported_namespace\", \"(.+)\"))) or (label_replace(cfg_distributor_kv_operations_total{resource=\"configmap\", exported_namespace!=\"\"}, \"target_namespace\", \"$1\", \"exported_namespace\", \"(.+)\") unless label_replace(cfg_distributor_kv_operations_total{resource=\"configmap\", exported_namespace!=\"\"} offset $__range, \"target_namespace\", \"$1\", \"exported_namespace\", \"(.+)\"))) or ((increase(cfg_distributor_kv_operations_total{resource=\"configmap\", target_namespace!=\"\"}[$__range]) unless (cfg_distributor_kv_operations_total{resource=\"configmap\", target_namespace!=\"\"} unless cfg_distributor_kv_operations_total{resource=\"configmap\", target_namespace!=\"\"} offset $__range)) or (cfg_distributor_kv_operations_total{resource=\"configmap\", target_namespace!=\"\"} unless cfg_distributor_kv_operations_total{resource=\"configmap\", target_namespace!=\"\"} offset $__range)))",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 0,
+            "barAlignment": 0,
+            "gradientMode": "none"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byValue", "options": { "reducer": "allIsZero" } },
+            "properties": [{ "id": "custom.hideFrom", "value": { "legend": true, "tooltip": true, "viz": true } }]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "auto",
+        "xTickLabelRotation": 0,
+        "groupWidth": 0.7,
+        "barWidth": 0.97,
+        "xField": "target_namespace",
+        "colorByField": "result",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": ["sum"]
+        },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "transformations": [
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "result": { "aggregations": [], "operation": "groupby" },
+              "Value": { "aggregations": ["sum"], "operation": "aggregate" }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "barchart",
+      "title": "KV Operations - Error reason별",
+      "description": "선택 기간 동안 발생한 KV operation 중 error를 reason별로 집계합니다.",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "sum by (target_namespace, reason) (((label_replace(increase(cfg_distributor_kv_operations_total{resource=\"configmap\", result=\"error\", exported_namespace!=\"\"}[$__range]), \"target_namespace\", \"$1\", \"exported_namespace\", \"(.+)\") unless (label_replace(cfg_distributor_kv_operations_total{resource=\"configmap\", result=\"error\", exported_namespace!=\"\"}, \"target_namespace\", \"$1\", \"exported_namespace\", \"(.+)\") unless label_replace(cfg_distributor_kv_operations_total{resource=\"configmap\", result=\"error\", exported_namespace!=\"\"} offset $__range, \"target_namespace\", \"$1\", \"exported_namespace\", \"(.+)\"))) or (label_replace(cfg_distributor_kv_operations_total{resource=\"configmap\", result=\"error\", exported_namespace!=\"\"}, \"target_namespace\", \"$1\", \"exported_namespace\", \"(.+)\") unless label_replace(cfg_distributor_kv_operations_total{resource=\"configmap\", result=\"error\", exported_namespace!=\"\"} offset $__range, \"target_namespace\", \"$1\", \"exported_namespace\", \"(.+)\"))) or ((increase(cfg_distributor_kv_operations_total{resource=\"configmap\", result=\"error\", target_namespace!=\"\"}[$__range]) unless (cfg_distributor_kv_operations_total{resource=\"configmap\", result=\"error\", target_namespace!=\"\"} unless cfg_distributor_kv_operations_total{resource=\"configmap\", result=\"error\", target_namespace!=\"\"} offset $__range)) or (cfg_distributor_kv_operations_total{resource=\"configmap\", result=\"error\", target_namespace!=\"\"} unless cfg_distributor_kv_operations_total{resource=\"configmap\", result=\"error\", target_namespace!=\"\"} offset $__range)))",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "0",
+          "color": { "mode": "fixed", "fixedColor": "red" },
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 0,
+            "barAlignment": 0,
+            "gradientMode": "none"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "auto",
+        "xTickLabelRotation": 0,
+        "groupWidth": 0.7,
+        "barWidth": 0.97,
+        "xField": "target_namespace",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": ["sum"]
+        },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "transformations": [
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "reason": { "aggregations": [], "operation": "groupby" },
+              "Value": { "aggregations": ["sum"], "operation": "aggregate" }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "barchart",
+      "title": "파일명(name)별 이벤트 발생 현황",
+      "description": "선택 기간 동안 configmap 파일명 기준으로 success / error 건수를 집계합니다.",
+      "gridPos": { "x": 0, "y": 16, "w": 24, "h": 10 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "sum by (target_namespace, name) (((label_replace(increase(cfg_distributor_kube_events_total{resource=\"configmap\", result=\"success\", exported_namespace!=\"\"}[$__range]), \"target_namespace\", \"$1\", \"exported_namespace\", \"(.+)\") unless (label_replace(cfg_distributor_kube_events_total{resource=\"configmap\", result=\"success\", exported_namespace!=\"\"}, \"target_namespace\", \"$1\", \"exported_namespace\", \"(.+)\") unless label_replace(cfg_distributor_kube_events_total{resource=\"configmap\", result=\"success\", exported_namespace!=\"\"} offset $__range, \"target_namespace\", \"$1\", \"exported_namespace\", \"(.+)\"))) or (label_replace(cfg_distributor_kube_events_total{resource=\"configmap\", result=\"success\", exported_namespace!=\"\"}, \"target_namespace\", \"$1\", \"exported_namespace\", \"(.+)\") unless label_replace(cfg_distributor_kube_events_total{resource=\"configmap\", result=\"success\", exported_namespace!=\"\"} offset $__range, \"target_namespace\", \"$1\", \"exported_namespace\", \"(.+)\"))) or ((increase(cfg_distributor_kube_events_total{resource=\"configmap\", result=\"success\", target_namespace!=\"\"}[$__range]) unless (cfg_distributor_kube_events_total{resource=\"configmap\", result=\"success\", target_namespace!=\"\"} unless cfg_distributor_kube_events_total{resource=\"configmap\", result=\"success\", target_namespace!=\"\"} offset $__range)) or (cfg_distributor_kube_events_total{resource=\"configmap\", result=\"success\", target_namespace!=\"\"} unless cfg_distributor_kube_events_total{resource=\"configmap\", result=\"success\", target_namespace!=\"\"} offset $__range)))",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "success",
+          "refId": "A"
+        },
+        {
+          "expr": "sum by (target_namespace, name) (((label_replace(increase(cfg_distributor_kube_events_total{resource=\"configmap\", result=\"error\", exported_namespace!=\"\"}[$__range]), \"target_namespace\", \"$1\", \"exported_namespace\", \"(.+)\") unless (label_replace(cfg_distributor_kube_events_total{resource=\"configmap\", result=\"error\", exported_namespace!=\"\"}, \"target_namespace\", \"$1\", \"exported_namespace\", \"(.+)\") unless label_replace(cfg_distributor_kube_events_total{resource=\"configmap\", result=\"error\", exported_namespace!=\"\"} offset $__range, \"target_namespace\", \"$1\", \"exported_namespace\", \"(.+)\"))) or (label_replace(cfg_distributor_kube_events_total{resource=\"configmap\", result=\"error\", exported_namespace!=\"\"}, \"target_namespace\", \"$1\", \"exported_namespace\", \"(.+)\") unless label_replace(cfg_distributor_kube_events_total{resource=\"configmap\", result=\"error\", exported_namespace!=\"\"} offset $__range, \"target_namespace\", \"$1\", \"exported_namespace\", \"(.+)\"))) or ((increase(cfg_distributor_kube_events_total{resource=\"configmap\", result=\"error\", target_namespace!=\"\"}[$__range]) unless (cfg_distributor_kube_events_total{resource=\"configmap\", result=\"error\", target_namespace!=\"\"} unless cfg_distributor_kube_events_total{resource=\"configmap\", result=\"error\", target_namespace!=\"\"} offset $__range)) or (cfg_distributor_kube_events_total{resource=\"configmap\", result=\"error\", target_namespace!=\"\"} unless cfg_distributor_kube_events_total{resource=\"configmap\", result=\"error\", target_namespace!=\"\"} offset $__range)))",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "error",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 0,
+            "barAlignment": 0,
+            "gradientMode": "none"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "success" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "error" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "auto",
+        "xTickLabelRotation": -45,
+        "groupWidth": 0.7,
+        "barWidth": 0.97,
+        "xField": "name",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": ["sum"]
+        },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "name": { "aggregations": [], "operation": "groupby" },
+              "Value #A": { "aggregations": ["sum"], "operation": "aggregate" },
+              "Value #B": { "aggregations": ["sum"], "operation": "aggregate" }
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "Value #A (sum)": "success",
+              "Value #B (sum)": "error"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
