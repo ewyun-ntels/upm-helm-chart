@@ -319,7 +319,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (sys_id) (label_replace(increase(tcp_bridge_inbound_requests_total{job=~\"$job\", pod=~\"$pod\"}[2m]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\")) and on (sys_id) max by (sys_id) (tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"})",
+          "expr": "round(sum by (sys_id) (label_replace(increase(tcp_bridge_inbound_requests_total{job=~\"$job\", pod=~\"$pod\"}[2m]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\")) and on (sys_id) max by (sys_id) (tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"}))",
           "legendFormat": "{{sys_id}} request",
           "refId": "A"
         }
@@ -365,7 +365,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (sys_id) (label_replace(increase(tcp_bridge_outbound_requests_total{job=~\"$job\", pod=~\"$pod\"}[2m]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\")) and on (sys_id) max by (sys_id) (tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"})",
+          "expr": "round(sum by (sys_id) (label_replace(increase(tcp_bridge_outbound_requests_total{job=~\"$job\", pod=~\"$pod\"}[2m]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\")) and on (sys_id) max by (sys_id) (tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"}))",
           "legendFormat": "{{sys_id}} request",
           "refId": "A"
         }
