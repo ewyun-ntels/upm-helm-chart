@@ -10,13 +10,7 @@
 3. View application logs:
   kubectl --namespace {{ .Release.Namespace }} logs -l "app.kubernetes.io/name={{ include "tcp-bridge.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -f
 
-{{- if .Values.serviceMonitor.enabled }}
-4. ServiceMonitor has been created for Prometheus Operator
-  Check metrics scraping:
-  kubectl --namespace {{ .Values.serviceMonitor.namespace | default .Release.Namespace }} get servicemonitor {{ include "tcp-bridge.fullname" . }}
-{{- end }}
-
-5. Configuration:
+4. Configuration:
   The application is configured via ConfigMap:
   kubectl --namespace {{ .Release.Namespace }} get configmap {{ include "tcp-bridge.fullname" . }}-config -o yaml
 

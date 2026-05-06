@@ -1,0 +1,126 @@
+{{- if (index .Values.instances 1).enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tcp-bridge.fullname" . }}-1
+  labels:
+    {{- include "tcp-bridge.labels" . | nindent 4 }}
+    tcp-bridge-index: "1"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "tcp-bridge.selectorLabels" . | nindent 6 }}
+      tcp-bridge-index: "1"
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: {{ .Values.rollingUpdate.maxUnavailable }}
+      maxSurge: {{ .Values.rollingUpdate.maxSurge }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/formatter-pg-response: {{ include (print $.Template.BasePath "/formatter-pg-result-configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "tcp-bridge.selectorLabels" . | nindent 8 }}
+        tcp-bridge-index: "1"
+    spec:
+      serviceAccountName: {{ include "tcp-bridge.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+      - name: {{ .Chart.Name }}
+        securityContext:
+          {{- toYaml .Values.securityContext | nindent 12 }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - name: metrics
+          containerPort: {{ .Values.config.metrics.port }}
+          protocol: TCP
+        {{- if .Values.livenessProbe }}
+        livenessProbe:
+          {{- toYaml .Values.livenessProbe | nindent 12 }}
+        {{- end }}
+        {{- if .Values.readinessProbe }}
+        readinessProbe:
+          {{- toYaml .Values.readinessProbe | nindent 12 }}
+        {{- end }}
+        resources:
+          {{- toYaml .Values.resources | nindent 12 }}
+        volumeMounts:
+        - name: config
+          mountPath: /app/config.yaml
+          subPath: config.yaml
+          readOnly: true
+        - name: formatter-pg-response
+          mountPath: {{ .Values.config.pg_response_formatter.fle | quote }}
+          subPath: formatter_pg_result.json
+          readOnly: true
+        env:
+        - name: POD_INDEX
+          value: "1"
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+      volumes:
+      - name: config
+        configMap:
+          name: {{ include "tcp-bridge.fullname" . }}-config
+      - name: formatter-pg-response
+        configMap:
+          name: {{ include "tcp-bridge.fullname" . }}-formatter-pg-response
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.podAntiAffinity.enabled }}
+      affinity:
+        podAntiAffinity:
+          {{- if eq .Values.podAntiAffinity.type "required" }}
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                - {{ include "tcp-bridge.name" . }}
+            topologyKey: kubernetes.io/hostname
+          {{- else }}
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app.kubernetes.io/name
+                  operator: In
+                  values:
+                  - {{ include "tcp-bridge.name" . }}
+              topologyKey: kubernetes.io/hostname
+          {{- end }}
+      {{- end }}
+      {{- if .Values.nodeEviction.enabled }}
+      tolerations:
+      - key: "node.kubernetes.io/not-ready"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: {{ .Values.nodeEviction.tolerationSeconds }}
+      - key: "node.kubernetes.io/unreachable"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: {{ .Values.nodeEviction.tolerationSeconds }}
+      {{- end }}
+{{- end }}

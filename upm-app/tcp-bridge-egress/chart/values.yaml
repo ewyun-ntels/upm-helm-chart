@@ -1,0 +1,185 @@
+# Default values for tcp-bridge
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 2
+
+# Instances configuration for multiple deployments
+instances:
+  - index: 0
+    enabled: true
+    egressIP:
+      enabled: true
+      name: tcp-bridge-egressip-0
+      ip: "10.255.254.101"
+  - index: 1
+    enabled: true
+    egressIP:
+      enabled: true
+      name: tcp-bridge-egressip-1
+      ip: "10.255.254.102"
+
+image:
+  repository: 192.168.61.145/ewy/tcp-bridge
+  pullPolicy: Always
+  tag: "latest"
+
+podAnnotations: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false
+  allowPrivilegeEscalation: false
+
+service:
+  port: 8080
+
+rollingUpdate:
+  maxUnavailable: 1
+  maxSurge: 0
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+nodeSelector:
+  node-group.ntels.io/type: upm-app
+
+# Node eviction settings
+# Fast eviction when node becomes not-ready or unreachable
+nodeEviction:
+  enabled: true
+  tolerationSeconds: 10
+
+podAntiAffinity:
+  enabled: true
+  # Use 'required' for hard constraint or 'preferred' for soft constraint
+  type: required  # required or preferred
+
+formatterPgResponse:
+  resultCode: "FA2004"
+
+config:
+  server:
+    name: "tcp-bridge"
+    version: "1.0.0"
+    environment: "development"
+    shutdown_timeout: "3s"
+
+  tcp:
+    endpoints:
+      - name: "PG01"
+        host: "192.168.10.112"
+        port: 10506
+        priority: 0
+      - name: "PG-TEST"
+        host: "10.255.254.22"
+        port: 10506
+        priority: 1
+    
+    connect_timeout: "2s"
+    write_timeout: "30s"
+    keep_alive: "30s"
+    max_frame_size: 65535
+    frame_header_size: 8
+    handshake_timeout: "10s"
+    ping_timeout: "5s"
+    ping_interval_margin: "5s"
+
+    sys_prefix_id: "upmc-"
+    branch_name: "SS"
+
+  nats:
+    urls:
+      - "nats://nats:4222"
+    connect_timeout: "5s"
+
+    message_type_routing:
+      outbound:
+        "09":
+          subject: "tcp.cellinfo.noti"
+          response_msg_type: "0a"
+        "0b":
+          subject: "tcp.subs.sync"
+          response_msg_type: "0c"  
+      inbound:
+        "05":
+          subject: "tcp.subs.chg"
+          response_msg_type: "06"
+        "07":
+          subject: "tcp.subs.info"
+          response_msg_type: "08"
+        "0d":
+          subject: "tcp.subs.dvc"
+          response_msg_type: "0e"
+        "0f":
+          subject: "xxxxxxxxxxxxxxxxxxxx"
+          response_msg_type: "10"
+
+  message_handler:
+    outbound:
+      response_timeout: "5s"
+      retry_attempts: 10
+      worker_count: 20
+      queue_size: 500
+      error_reply:
+        result_code: "FATB2004"
+    inbound:
+      timeout: "30s"
+      worker_count: 20
+      queue_size: 500
+
+  pg_response_formatter:
+    fle: "/app/formatter_pg_result.json"
+
+  metrics:
+    enabled: true
+    port: 8080
+    path: "/metrics"
+    include_default_metrics: false
+
+  logging:
+    level: "debug"
+    format: "text"
+
+  alerta:
+    enabled: true
+    url: "http://alerta.upm-ems.svc.cluster.local:8080/api/alert"
+    timeout: "3s"
+    environment: "RealTimeAlert"
+    alerts:
+      - item: "PGConnectionState"
+        group: "Connection"
+        err_code: "1004"
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 3
+  successThreshold: 1
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  successThreshold: 1
+  failureThreshold: 3

@@ -1,0 +1,27 @@
+{{- $root := . }}
+{{- range .Values.instances }}
+{{- $instanceEgressIPEnabled := dig "egressIP" "enabled" false . }}
+{{- if and .enabled $instanceEgressIPEnabled }}
+{{- $index := .index }}
+{{- $name := (dig "egressIP" "name" "" .) | default (printf "%s-egressip-%v" (include "tcp-bridge.fullname" $root) $index) }}
+{{- $ip := required (printf "instances[%v].egressIP.ip is required when egressIP is enabled" $index) (dig "egressIP" "ip" "" .) }}
+apiVersion: k8s.ovn.org/v1
+kind: EgressIP
+metadata:
+  name: {{ $name | quote }}
+  labels:
+    {{- include "tcp-bridge.labels" $root | nindent 4 }}
+    tcp-bridge-index: {{ $index | quote }}
+spec:
+  egressIPs:
+  - {{ $ip | quote }}
+  namespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: {{ $root.Release.Namespace | quote }}
+  podSelector:
+    matchLabels:
+      {{- include "tcp-bridge.selectorLabels" $root | nindent 6 }}
+      tcp-bridge-index: {{ $index | quote }}
+---
+{{- end }}
+{{- end }}

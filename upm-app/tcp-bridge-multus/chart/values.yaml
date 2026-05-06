@@ -83,17 +83,6 @@ securityContext:
 service:
   port: 8080
 
-serviceMonitor:
-  enabled: false
-  labels:
-    release: kube-prometheus-stack
-  interval: 10s
-  scrapeTimeout: 5s
-  namespace: ""
-
-prometheusRule:
-  enabled: false
-
 rollingUpdate:
   maxUnavailable: 1
   maxSurge: 0

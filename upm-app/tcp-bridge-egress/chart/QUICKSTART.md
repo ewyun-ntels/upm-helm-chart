@@ -33,24 +33,11 @@ kubectl get all -n upm-messaging -l app.kubernetes.io/name=tcp-bridge
 kubectl logs -n upm-messaging -l app.kubernetes.io/name=tcp-bridge -f
 ```
 
-### 3. ServiceMonitor 포함 배포
+### 3. 모니터링 매니페스트 적용
 
 ```bash
-# Prometheus Operator가 설치되어 있는지 확인
-kubectl get crd servicemonitors.monitoring.coreos.com
-
-# values 파일 수정
-cp chart/values.yaml my-monitoring-values.yaml
-vi my-monitoring-values.yaml
-
-# 예시:
-# serviceMonitor.enabled=true
-# serviceMonitor.namespace=upm-monitoring
-
-helm install tcp-bridge chart/ -f my-monitoring-values.yaml -n upm-messaging --create-namespace
-
-# ServiceMonitor 확인
-kubectl get servicemonitor -n upm-monitoring tcp-bridge
+# chart 배포 후 post-install 정적 매니페스트 적용
+kubectl apply -f ../../post-install/tcp-bridge/
 ```
 
 ### 4. 프로덕션 배포
@@ -115,13 +102,6 @@ kubectl delete namespace upm-messaging
 # my-k3s-values.yaml
 replicaCount: 2
 
-serviceMonitor:
-  enabled: true
-  labels:
-    release: kube-prometheus-stack  # 기존 Prometheus Operator 레이블
-  namespace: upm-monitoring  # ServiceMonitor는 monitoring 네임스페이스에
-  interval: 10s
-
 config:
   nats:
     urls:
@@ -132,18 +112,6 @@ config:
       - host: "your-tcp-server-host"
         port: 8000
         priority: 0
-
-multus:
-  enabled: true
-  createNAD: true
-  network:
-    name: tcp-bridge-net
-    master: eth0
-    ipam:
-      range: 10.10.10.20/29
-      rangeStart: 10.10.10.21
-      rangeEnd: 10.10.10.22
-      gateway: 10.10.10.1
 ```
 
 배포:
@@ -192,10 +160,10 @@ kubectl logs -n upm-messaging -l app.kubernetes.io/name=tcp-bridge --previous
 kubectl get configmap -n upm-messaging tcp-bridge-config -o yaml
 ```
 
-### ServiceMonitor 작동 확인
+### Prometheus 연동 확인
 
 ```bash
-# ServiceMonitor 존재 확인
+# post-install 정적 매니페스트 적용 후 ServiceMonitor 존재 확인
 kubectl get servicemonitor -n upm-monitoring
 
 # Prometheus가 타겟을 발견했는지 확인
