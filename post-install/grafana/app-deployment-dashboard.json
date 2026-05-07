@@ -492,13 +492,211 @@
       ]
     },
     {
+      "id": 11,
+      "type": "table",
+      "title": "All Node Pod Status Board",
+      "description": "전체 노드에 떠 있는 Pod의 최신 phase를 노드/Namespace/Pod 단위로 표시합니다.",
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 24,
+        "h": 16
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "max by (node, namespace, pod, phase, pod_ip, host_ip, created_by_kind, created_by_name) ((kube_pod_status_phase{namespace=~\"$namespace\"} == 1) * on(namespace, pod) group_left(node, pod_ip, host_ip, created_by_kind, created_by_name) kube_pod_info{namespace=~\"$namespace\"})",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "phase"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "Running": {
+                        "text": "Running",
+                        "color": "green"
+                      },
+                      "Pending": {
+                        "text": "Pending",
+                        "color": "yellow"
+                      },
+                      "Succeeded": {
+                        "text": "Succeeded",
+                        "color": "blue"
+                      },
+                      "Failed": {
+                        "text": "Failed",
+                        "color": "red"
+                      },
+                      "Unknown": {
+                        "text": "Unknown",
+                        "color": "purple"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "node"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "namespace"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pod"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 380
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pod_ip"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "created_by_name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 260
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "md",
+        "footer": {
+          "show": true,
+          "reducer": [
+            "count"
+          ],
+          "countRows": false,
+          "fields": ""
+        }
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value": true
+            },
+            "indexByName": {
+              "node": 0,
+              "namespace": 1,
+              "pod": 2,
+              "phase": 3,
+              "pod_ip": 4,
+              "host_ip": 5,
+              "created_by_kind": 6,
+              "created_by_name": 7
+            },
+            "renameByName": {
+              "node": "Node",
+              "namespace": "Namespace",
+              "pod": "Pod",
+              "phase": "Phase",
+              "pod_ip": "Pod IP",
+              "host_ip": "Host IP",
+              "created_by_kind": "Owner Kind",
+              "created_by_name": "Owner Name"
+            }
+          }
+        }
+      ]
+    },
+    {
       "id": 1,
       "type": "stat",
       "title": "Node Ready",
       "description": "선택한 노드의 Ready condition 상태를 표시합니다.",
       "gridPos": {
         "x": 0,
-        "y": 16,
+        "y": 32,
         "w": 6,
         "h": 5
       },
@@ -575,7 +773,7 @@
       "description": "선택한 노드에 떠 있는 Pod를 phase별로 집계합니다.",
       "gridPos": {
         "x": 6,
-        "y": 16,
+        "y": 32,
         "w": 18,
         "h": 5
       },
@@ -713,7 +911,7 @@
       "description": "선택한 노드 안에 떠 있는 Pod를 행으로 표시하고 phase를 색상으로 구분합니다.",
       "gridPos": {
         "x": 0,
-        "y": 21,
+        "y": 37,
         "w": 24,
         "h": 10
       },
@@ -817,7 +1015,7 @@
       "description": "선택한 노드에 스케줄링된 Pod 목록과 현재 phase를 표시합니다.",
       "gridPos": {
         "x": 0,
-        "y": 31,
+        "y": 47,
         "w": 24,
         "h": 10
       },
