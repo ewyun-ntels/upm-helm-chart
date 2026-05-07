@@ -101,7 +101,7 @@
       },
       "targets": [
         {
-          "expr": "((sum by (sys_id) (label_replace(increase(tcp_bridge_inbound_outcomes_total{job=~\"$job\", pod=~\"$pod\", reason=\"ok\"}[2m]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\"))) / clamp_min(sum by (sys_id) (label_replace(increase(tcp_bridge_inbound_requests_total{job=~\"$job\", pod=~\"$pod\"}[2m]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\")), 1)) and on (sys_id) max by (sys_id) (tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"})",
+          "expr": "(((sum by (sys_id) (label_replace(increase(tcp_bridge_inbound_outcomes_total{job=~\"$job\", pod=~\"$pod\", reason=\"ok\"}[2m]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\"))) or on (sys_id) (sum by (sys_id) (label_replace(increase(tcp_bridge_inbound_requests_total{job=~\"$job\", pod=~\"$pod\"}[2m]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\")) * 0)) / clamp_min(sum by (sys_id) (label_replace(increase(tcp_bridge_inbound_requests_total{job=~\"$job\", pod=~\"$pod\"}[2m]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\")), 1)) and on (sys_id) max by (sys_id) (tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"})",
           "legendFormat": "{{sys_id}} 처리완료율",
           "refId": "A"
         },
@@ -210,7 +210,7 @@
       },
       "targets": [
         {
-          "expr": "((sum by (sys_id) (label_replace(increase(tcp_bridge_outbound_outcomes_total{job=~\"$job\", pod=~\"$pod\", reason=\"ok\"}[2m]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\"))) / clamp_min(sum by (sys_id) (label_replace(increase(tcp_bridge_outbound_requests_total{job=~\"$job\", pod=~\"$pod\"}[2m]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\")), 1)) and on (sys_id) max by (sys_id) (tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"})",
+          "expr": "(((sum by (sys_id) (label_replace(increase(tcp_bridge_outbound_outcomes_total{job=~\"$job\", pod=~\"$pod\", reason=\"ok\"}[2m]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\"))) or on (sys_id) (sum by (sys_id) (label_replace(increase(tcp_bridge_outbound_requests_total{job=~\"$job\", pod=~\"$pod\"}[2m]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\")) * 0)) / clamp_min(sum by (sys_id) (label_replace(increase(tcp_bridge_outbound_requests_total{job=~\"$job\", pod=~\"$pod\"}[2m]), \"sys_id\", \"$1\", \"pod\", \".*(tcp-bridge-[0-9]+).*\")), 1)) and on (sys_id) max by (sys_id) (tcp_bridge:ready_connection_state:max{job=~\"$job\", pod=~\"$pod\", sys_id=~\"$sys_id\"})",
           "legendFormat": "{{sys_id}} 처리완료율",
           "refId": "A"
         },
@@ -863,7 +863,7 @@
       },
       "targets": [
         {
-          "expr": "(sum(increase(tcp_bridge_inbound_outcomes_total{job=~\"$job\", pod=~\"$pod\", reason=\"ok\"}[2m]))) / clamp_min(sum(increase(tcp_bridge_inbound_requests_total{job=~\"$job\", pod=~\"$pod\"}[2m])), 1)",
+          "expr": "((sum(increase(tcp_bridge_inbound_outcomes_total{job=~\"$job\", pod=~\"$pod\", reason=\"ok\"}[2m])) or vector(0)) / clamp_min((sum(increase(tcp_bridge_inbound_requests_total{job=~\"$job\", pod=~\"$pod\"}[2m])) or vector(0)), 1))",
           "legendFormat": "처리완료율",
           "refId": "A"
         },
@@ -972,7 +972,7 @@
       },
       "targets": [
         {
-          "expr": "(sum(increase(tcp_bridge_outbound_outcomes_total{job=~\"$job\", pod=~\"$pod\", reason=\"ok\"}[2m]))) / clamp_min(sum(increase(tcp_bridge_outbound_requests_total{job=~\"$job\", pod=~\"$pod\"}[2m])), 1)",
+          "expr": "((sum(increase(tcp_bridge_outbound_outcomes_total{job=~\"$job\", pod=~\"$pod\", reason=\"ok\"}[2m])) or vector(0)) / clamp_min((sum(increase(tcp_bridge_outbound_requests_total{job=~\"$job\", pod=~\"$pod\"}[2m])) or vector(0)), 1))",
           "legendFormat": "처리완료율",
           "refId": "A"
         },
