@@ -1,0 +1,12 @@
+{{- if .Values.upmems.enabled }}
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: upmems
+  namespace: {{ .Release.Namespace }}
+spec:
+  name: {{ .Values.upmems.database | quote }}
+  owner: {{ .Values.upmems.auth.username | quote }}
+  cluster:
+    name: upmdb-cluster
+{{- end }}

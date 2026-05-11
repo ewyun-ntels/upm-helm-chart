@@ -20,3 +20,10 @@ upmalert:
     username: upmalert
     password: "upmalert"
   database: upmalert
+
+upmems:
+  enabled: true
+  auth:
+    username: upmems
+    password: "upmems"
+  database: upmems

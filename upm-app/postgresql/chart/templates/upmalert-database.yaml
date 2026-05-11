@@ -1,0 +1,12 @@
+{{- if .Values.upmalert.enabled }}
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: upmalert
+  namespace: {{ .Release.Namespace }}
+spec:
+  name: {{ .Values.upmalert.database | quote }}
+  owner: {{ .Values.upmalert.auth.username | quote }}
+  cluster:
+    name: upmdb-cluster
+{{- end }}

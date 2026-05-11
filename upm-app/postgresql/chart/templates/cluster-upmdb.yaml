@@ -43,20 +43,24 @@ spec:
       owner: {{ .Values.upmdb.auth.username | quote }}
       secret:
         name: upmdb-app-secret
-      {{- if .Values.upmalert.enabled }}
-      postInitSQL:
-        - CREATE ROLE {{ .Values.upmalert.auth.username }} LOGIN PASSWORD {{ .Values.upmalert.auth.password | squote }};
-        - CREATE DATABASE {{ .Values.upmalert.database }} OWNER {{ .Values.upmalert.auth.username }};
-      {{- end }}
       postInitApplicationSQL:
         - CREATE EXTENSION IF NOT EXISTS postgis;
         - CREATE EXTENSION IF NOT EXISTS postgis_topology;
-  {{- if .Values.upmalert.enabled }}
+  {{- if or .Values.upmalert.enabled .Values.upmems.enabled }}
   managed:
     roles:
+      {{- if .Values.upmalert.enabled }}
       - name: {{ .Values.upmalert.auth.username | quote }}
         ensure: present
         login: true
         passwordSecret:
           name: upmalert-app-secret
+      {{- end }}
+      {{- if .Values.upmems.enabled }}
+      - name: {{ .Values.upmems.auth.username | quote }}
+        ensure: present
+        login: true
+        passwordSecret:
+          name: upmems-app-secret
+      {{- end }}
   {{- end }}
