@@ -81,9 +81,10 @@ env:
   ALLOWED_ENVIRONMENTS: "Production,Development,RealTimeAlert,MetricAlert"
   # Used by webhook integrations when the incoming payload has no environment label.
   DEFAULT_ENVIRONMENT: "RealTimeAlert"
-  # Keep housekeeping enabled but prevent it from deleting alerts from the database.
-  DELETE_EXPIRED_AFTER: "0"
-  DELETE_INFO_AFTER: "0"
+  # Disable alert expiration while keeping closed/expired and informational alerts for one year.
+  ALERT_TIMEOUT: "0"
+  DELETE_EXPIRED_AFTER: "31536000"
+  DELETE_INFO_AFTER: "31536000"
   HK_EXPIRED_DELETE_HRS: "0"
   HK_INFO_DELETE_HRS: "0"
   DEFAULT_EXPIRED_DELETE_HRS: "0"
